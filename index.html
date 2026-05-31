@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>履歴書ビルダー v2 | Rirekisho Builder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;600;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#f4f1e8; --ink:#1c1b18; --indigo:#1f2d50; --indigo-soft:#3a4a72;
+    --vermilion:#b8472b; --line:#cfc8b6; --card:#fbfaf4; --muted:#7a7464;
+    --doc-line:#2b2b2b; --ai:#0d6e63; --ai-soft:#e3f1ef;
+    --shadow:0 12px 40px -18px rgba(28,27,24,.45);
+    --ui:"Zen Kaku Gothic New",sans-serif; --mincho:"Shippori Mincho",serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:var(--ui);
+    background:
+      radial-gradient(circle at 12% -10%, rgba(31,45,80,.06), transparent 40%),
+      radial-gradient(circle at 100% 0%, rgba(184,71,43,.05), transparent 35%),
+      var(--paper);
+    color:var(--ink); min-height:100vh; -webkit-font-smoothing:antialiased;
+  }
+  header.app{
+    position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;
+    gap:16px;flex-wrap:wrap;padding:13px clamp(14px,3vw,34px);
+    background:rgba(244,241,232,.88);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);
+  }
+  .brand{display:flex;align-items:center;gap:13px;}
+  .seal{width:42px;height:42px;flex:none;border-radius:7px;background:var(--vermilion);color:#fff;
+    display:grid;place-items:center;font-family:var(--mincho);font-weight:700;font-size:21px;
+    box-shadow:inset 0 0 0 2px rgba(255,255,255,.25);transform:rotate(-3deg);}
+  .brand h1{font-family:var(--mincho);font-size:clamp(17px,2.4vw,22px);margin:0;font-weight:700;color:var(--indigo);}
+  .brand p{margin:1px 0 0;font-size:11px;color:var(--muted);letter-spacing:.03em;}
+  .controls{display:flex;align-items:center;gap:9px;flex-wrap:wrap;}
+  .lang-toggle{display:flex;border:1px solid var(--indigo);border-radius:999px;overflow:hidden;}
+  .lang-sel{border:1px solid var(--indigo);color:var(--indigo);background:#fff;border-radius:999px;
+    font-family:var(--ui);font-weight:700;font-size:12.5px;padding:7px 12px;cursor:pointer;max-width:160px;}
+  #sheet,.doc-scale{direction:ltr;}
+  .lang-toggle button{border:none;background:transparent;color:var(--indigo);font-family:var(--ui);
+    font-weight:700;font-size:12px;padding:7px 14px;cursor:pointer;transition:.18s;}
+  .lang-toggle button.active{background:var(--indigo);color:#fff;}
+  .btn-print{border:none;background:var(--indigo);color:#fff;cursor:pointer;font-family:var(--ui);
+    font-weight:700;font-size:13px;padding:9px 17px;border-radius:999px;display:flex;align-items:center;gap:7px;
+    transition:.18s;box-shadow:0 6px 16px -8px var(--indigo);}
+  .btn-print:hover{background:var(--indigo-soft);transform:translateY(-1px);}
+  .mini-link{border:none;background:transparent;color:var(--muted);font-family:var(--ui);font-weight:700;
+    font-size:12px;cursor:pointer;padding:6px 8px;border-radius:7px;transition:.15s;}
+  .mini-link:hover{background:rgba(31,45,80,.07);color:var(--indigo);}
+  .save-stat{font-size:11px;color:var(--ai);font-weight:700;min-width:54px;}
+  .btn-print.ghost-print{background:transparent;color:var(--indigo);box-shadow:none;border:1px solid var(--indigo);}
+  .btn-print.ghost-print:hover{background:rgba(31,45,80,.07);}
+
+  .wrap{display:grid;grid-template-columns:minmax(0,0.92fr) minmax(0,1.2fr);gap:clamp(14px,2.4vw,28px);
+    padding:clamp(14px,2.6vw,28px);max-width:1560px;margin:0 auto;align-items:start;}
+  @media(max-width:1000px){.wrap{grid-template-columns:1fr;}}
+
+  .form-col{display:flex;flex-direction:column;gap:16px;}
+  .section{background:var(--card);border:1px solid var(--line);border-radius:15px;box-shadow:var(--shadow);overflow:hidden;}
+  .section>h2{margin:0;font-family:var(--mincho);font-size:15.5px;font-weight:700;color:var(--indigo);
+    padding:14px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:9px;
+    background:linear-gradient(0deg,transparent,rgba(31,45,80,.03));}
+  .section>h2 .num{width:23px;height:23px;border-radius:6px;background:var(--indigo);color:#fff;font-size:12px;
+    font-weight:700;display:grid;place-items:center;font-family:var(--ui);flex:none;}
+  .section-body{padding:16px 18px;display:flex;flex-direction:column;gap:13px;}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px;}
+  @media(max-width:540px){.grid2,.grid3{grid-template-columns:1fr;}}
+  .field{display:flex;flex-direction:column;gap:5px;min-width:0;}
+  .field label{font-size:12px;font-weight:700;color:var(--ink);display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;}
+  .field label .en{font-size:10px;font-weight:500;color:var(--muted);}
+  .req{color:var(--vermilion);font-size:10px;}
+  .hint{font-size:10.5px;color:var(--muted);line-height:1.5;}
+  input,select,textarea{font-family:var(--ui);font-size:13px;color:var(--ink);background:#fff;
+    border:1px solid var(--line);border-radius:9px;padding:8px 10px;width:100%;transition:.15s;}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--indigo);box-shadow:0 0 0 3px rgba(31,45,80,.1);}
+  textarea{resize:vertical;min-height:70px;line-height:1.6;}
+
+  .rows{display:flex;flex-direction:column;gap:11px;}
+  .row-item{border:1px dashed var(--line);border-radius:11px;padding:12px;background:rgba(255,255,255,.6);position:relative;
+    display:flex;flex-direction:column;gap:9px;}
+  .row-item .del{position:absolute;top:-9px;right:-9px;width:24px;height:24px;border-radius:50%;border:none;
+    background:var(--vermilion);color:#fff;cursor:pointer;font-size:14px;line-height:1;display:grid;place-items:center;
+    box-shadow:0 3px 8px -3px rgba(0,0,0,.4);}
+  .mini{font-size:10px;color:var(--muted);margin-bottom:3px;font-weight:700;}
+  .radio-pill{display:flex;gap:7px;}
+  .radio-pill label{display:flex;align-items:center;gap:5px;font-size:12px;font-weight:700;cursor:pointer;
+    border:1px solid var(--line);border-radius:999px;padding:5px 12px;background:#fff;transition:.15s;}
+  .radio-pill input{width:auto;}
+  .radio-pill label:has(input:checked){border-color:var(--indigo);background:rgba(31,45,80,.07);color:var(--indigo);}
+  .add-btn{border:1px dashed var(--indigo);background:transparent;color:var(--indigo);font-family:var(--ui);
+    font-weight:700;font-size:12px;cursor:pointer;padding:10px;border-radius:10px;transition:.15s;}
+  .add-btn:hover{background:rgba(31,45,80,.06);}
+
+  .photo-up{display:flex;align-items:center;gap:14px;}
+  .photo-prev{width:74px;height:96px;border:1.5px dashed var(--line);border-radius:6px;display:grid;place-items:center;
+    font-size:10px;color:var(--muted);text-align:center;overflow:hidden;background:#fff;flex:none;}
+  .photo-prev img{width:100%;height:100%;object-fit:cover;}
+  .file-lbl{display:inline-block;border:1px solid var(--indigo);color:var(--indigo);padding:7px 13px;border-radius:8px;
+    font-size:12px;font-weight:700;cursor:pointer;transition:.15s;}
+  .file-lbl:hover{background:rgba(31,45,80,.06);}
+
+  .tip{font-size:10.8px;color:var(--muted);line-height:1.6;background:rgba(31,45,80,.04);
+    border-left:3px solid var(--indigo);padding:9px 11px;border-radius:0 8px 8px 0;}
+  .tip.warn{background:rgba(184,71,43,.06);border-left-color:var(--vermilion);}
+
+  /* AI */
+  .ai-badge{display:inline-flex;align-items:center;gap:5px;background:var(--ai-soft);color:var(--ai);
+    font-size:10px;font-weight:700;padding:3px 9px;border-radius:999px;border:1px solid rgba(13,110,99,.25);}
+  .ai-btn{border:1px solid var(--ai);background:var(--ai);color:#fff;font-family:var(--ui);font-weight:700;
+    font-size:12px;cursor:pointer;padding:8px 14px;border-radius:9px;transition:.15s;display:inline-flex;align-items:center;gap:6px;}
+  .ai-btn:hover{filter:brightness(1.08);transform:translateY(-1px);}
+  .ai-btn.ghost{background:transparent;color:var(--ai);}
+  .ai-btn:disabled{opacity:.5;cursor:wait;transform:none;}
+  .ai-panel{border:1px solid rgba(13,110,99,.3);background:var(--ai-soft);border-radius:11px;padding:13px;
+    display:flex;flex-direction:column;gap:10px;}
+  .ai-panel .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+  .ai-panel input,.ai-panel textarea,.ai-panel select{background:#fff;}
+  .ai-row-btns{display:flex;gap:8px;flex-wrap:wrap;}
+  .spin{width:13px;height:13px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;
+    display:inline-block;animation:sp .7s linear infinite;}
+  @keyframes sp{to{transform:rotate(360deg);}}
+
+  .preview-col{position:sticky;top:80px;}
+  @media(max-width:1000px){.preview-col{position:static;}}
+  .preview-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;padding:0 4px;}
+  .preview-bar span{font-size:11.5px;color:var(--muted);font-weight:700;}
+  .doc-scale{background:#dcd6c6;border-radius:14px;padding:clamp(8px,1.6vw,16px);box-shadow:var(--shadow);
+    overflow:auto;max-height:calc(100vh - 120px);}
+  @media(max-width:1000px){.doc-scale{max-height:none;}}
+
+  #sheet{color:var(--doc-line);font-family:var(--mincho);font-size:11px;line-height:1.5;}
+  .spread{display:flex;gap:12px;justify-content:center;align-items:stretch;}
+  .spread .page{background:#fff;border:1.5px solid var(--doc-line);flex:1 1 0;min-width:0;
+    display:flex;flex-direction:column;}
+  @media(max-width:820px){.spread{flex-direction:column;align-items:center;gap:16px;}
+    .spread .page{width:100%;max-width:560px;flex:none;}}
+  .page .grow{flex:1;}
+  #sheet .doc-title{display:flex;justify-content:space-between;align-items:flex-end;padding:9px 14px 6px;
+    border-bottom:1.5px solid var(--doc-line);}
+  #sheet .doc-title b{font-size:21px;font-weight:700;letter-spacing:.45em;}
+  #sheet .doc-title .date{font-size:10.5px;letter-spacing:0;font-weight:500;}
+  .dtable{width:100%;border-collapse:collapse;}
+  .dtable td,.dtable th{border:1px solid var(--doc-line);padding:4px 6px;vertical-align:middle;}
+  .lbl-cell{background:#f3f1ea;text-align:center;font-weight:600;font-size:10px;white-space:nowrap;}
+  .furi{font-size:8.5px;color:#555;}
+  .name-big{font-size:18px;font-weight:700;letter-spacing:.05em;}
+  .photo-cell{width:88px;text-align:center;vertical-align:top;}
+  .photo-cell .ph{width:82px;height:106px;border:1px solid #bbb;margin:2px auto;display:grid;place-items:center;
+    font-size:8px;color:#999;overflow:hidden;}
+  .photo-cell .ph img{width:100%;height:100%;object-fit:cover;}
+  .hist th{background:#f3f1ea;font-size:10.5px;font-weight:700;}
+  .hist .yr{width:74px;text-align:center;} .hist .mo{width:38px;text-align:center;}
+  .hist .sub{text-align:center;font-weight:700;background:#faf8f2;}
+  .hist .ev{padding-left:9px;} .hist .end{text-align:right;padding-right:13px;font-weight:600;}
+  .freebox{padding:7px 10px;white-space:pre-wrap;min-height:46px;font-size:11px;line-height:1.7;}
+  .sec-h{background:#f3f1ea;font-weight:700;text-align:center;font-size:10.5px;}
+  .empty-h{color:#bbb;}
+  .mini-grid td{font-size:10.5px;}
+  .foreign-box{background:#fbf7ee;}
+
+  @media print{
+    @page{size:A4 portrait;margin:9mm;}
+    header.app,.form-col,.preview-bar{display:none !important;}
+    body{background:#fff;}
+    .wrap{display:block;padding:0;max-width:none;} .preview-col{position:static;}
+    .doc-scale{background:#fff;box-shadow:none;padding:0;max-height:none;overflow:visible;}
+    #sheet{max-width:none;border:none;font-size:10.5px;}
+    .spread{display:block;}
+    .spread .page{max-width:none;width:100%;border-color:#000;page-break-after:always;}
+    .spread .page:last-child{page-break-after:auto;}
+    .dtable td,.dtable th{border-color:#000;}
+  }
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+
+<header class="app">
+  <div class="brand">
+    <div class="seal">履</div>
+    <div>
+      <h1 data-ja="履歴書ビルダー" data-en="Rirekisho Builder">履歴書ビルダー</h1>
+      <p data-ja="日本で働く外国人のための履歴書作成ツール ＋ AI支援" data-en="Japanese resume maker for foreign residents + AI">日本で働く外国人のための履歴書作成ツール ＋ AI支援</p>
+    </div>
+  </div>
+  <div class="controls">
+    <select id="langSel" class="lang-sel" onchange="setLang(this.value)">
+      <option value="ja">日本語</option>
+      <option value="en">English</option>
+      <option value="vi">Tiếng Việt</option>
+      <option value="id">Bahasa Indonesia</option>
+      <option value="zh">中文</option>
+      <option value="ne">नेपाली</option>
+      <option value="ur">اردو</option>
+      <option value="hi">हिन्दी</option>
+      <option value="ko">한국어</option>
+      <option value="pt">Português</option>
+    </select>
+    <span id="saveStat" class="save-stat"></span>
+    <button class="mini-link" onclick="resetAll()" data-ja="リセット" data-en="Reset">リセット</button>
+    <button class="btn-print ghost-print" id="saveBtnA3" onclick="savePDF('a3')"><span data-ja="A3見開き(コンビニ用)" data-en="A3 spread (konbini)">A3見開き(コンビニ用)</span></button>
+    <button class="btn-print" id="saveBtn" onclick="savePDF('a4x2')"><span>⬇</span><span data-ja="PDFを保存(A4×2枚)" data-en="Save PDF (2×A4)">PDFを保存(A4×2枚)</span></button>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="form-col">
+
+    <!-- 1 基本情報 -->
+    <div class="section">
+      <h2><span class="num">1</span><span data-ja="基本情報" data-en="Basic Information">基本情報</span></h2>
+      <div class="section-body">
+        <div class="grid2">
+          <div class="field">
+            <label><span data-ja="氏名(パスポート表記)" data-en="Name (as on passport)">氏名(パスポート表記)</span><span class="req">*</span></label>
+            <input id="name" placeholder="TAN WEI / 山田 太郎" oninput="render()">
+            <div class="hint" data-ja="パスポートの原文表記に合わせます。" data-en="Match the spelling on your passport.">パスポートの原文表記に合わせます。</div>
+          </div>
+          <div class="field">
+            <label><span data-ja="ふりがな" data-en="Furigana">ふりがな</span><span class="en">katakana</span></label>
+            <input id="furigana" placeholder="タン ウェイ / やまだ たろう" oninput="render()">
+            <div class="hint" data-ja="外国名はカタカナが一般的です。" data-en="Foreign names are usually in katakana.">外国名はカタカナが一般的です。</div>
+          </div>
+        </div>
+        <div class="grid3">
+          <div class="field"><label><span data-ja="生年(西暦)" data-en="Birth year">生年(西暦)</span><span class="req">*</span></label><input id="bYear" type="number" placeholder="1995" oninput="render()"></div>
+          <div class="field"><label><span data-ja="月" data-en="Month">月</span></label><input id="bMonth" type="number" placeholder="4" oninput="render()"></div>
+          <div class="field"><label><span data-ja="日" data-en="Day">日</span></label><input id="bDay" type="number" placeholder="15" oninput="render()"></div>
+        </div>
+        <div class="tip" data-ja="💡 西暦を入れると和暦と満年齢を自動計算します。記載日も自動で入ります。" data-en="💡 Enter the Western year — the Japanese era, current age, and today's date are filled automatically.">💡 西暦を入れると和暦と満年齢を自動計算します。記載日も自動で入ります。</div>
+        <div class="field" style="max-width:200px">
+          <label><span data-ja="性別" data-en="Gender">性別</span></label>
+          <select id="gender" onchange="render()">
+            <option value="">—</option>
+            <option data-ja="男" data-en="Male" value="男">男</option>
+            <option data-ja="女" data-en="Female" value="女">女</option>
+            <option data-ja="(記入しない)" data-en="(blank)" value="">(記入しない)</option>
+          </select>
+        </div>
+        <div class="photo-up">
+          <div class="photo-prev" id="photoPrev"><span data-ja="証明写真" data-en="ID photo">証明写真</span></div>
+          <div>
+            <label class="file-lbl"><span data-ja="写真をアップロード" data-en="Upload photo">写真をアップロード</span><input type="file" accept="image/*" style="display:none" onchange="loadPhoto(event)"></label>
+            <div class="hint" style="margin-top:6px" data-ja="縦4×横3cm程度。スーツ・無背景が基本。スマホ撮影でもOK。" data-en="Approx. 4×3 cm, business attire, plain background. A phone photo is fine.">縦4×横3cm程度。スーツ・無背景が基本。スマホ撮影でもOK。</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2 現住所・連絡先 -->
+    <div class="section">
+      <h2><span class="num">2</span><span data-ja="現住所・連絡先" data-en="Address & Contact">現住所・連絡先</span></h2>
+      <div class="section-body">
+        <div class="grid2">
+          <div class="field">
+            <label><span data-ja="郵便番号" data-en="Postal code">郵便番号</span></label>
+            <div style="display:flex;gap:7px">
+              <input id="zip" placeholder="160-0000" oninput="render()">
+              <button class="add-btn" style="white-space:nowrap;padding:8px 12px" onclick="lookupZip()"><span data-ja="自動入力" data-en="Auto">自動入力</span></button>
+            </div>
+            <div class="hint" id="zipMsg"></div>
+          </div>
+          <div class="field"><label><span data-ja="都道府県〜町名" data-en="Prefecture–town">都道府県〜町名</span></label><input id="addr1" placeholder="東京都新宿区西新宿" oninput="render()"></div>
+        </div>
+        <div class="grid3">
+          <div class="field"><label><span data-ja="地番" data-en="Block / number">地番</span></label><input id="addr2" placeholder="1-2-3" oninput="render()"></div>
+          <div class="field"><label><span data-ja="建物名" data-en="Building">建物名</span></label><input id="addr3" placeholder="〇〇マンション" oninput="render()"></div>
+          <div class="field"><label><span data-ja="部屋番号" data-en="Room">部屋番号</span></label><input id="addr4" placeholder="101" oninput="render()"></div>
+        </div>
+        <div class="field"><label><span data-ja="住所(ローマ字)" data-en="Address (Roman)">住所(ローマ字)</span></label><input id="addrRoma" placeholder="1-2-3 Nishi-Shinjuku, Shinjuku-ku, Tokyo" oninput="render()"></div>
+        <div class="grid2">
+          <div class="field"><label><span data-ja="電話番号" data-en="Phone">電話番号</span></label><input id="phone" placeholder="090-1234-5678" oninput="render()"></div>
+          <div class="field"><label><span data-ja="メールアドレス" data-en="Email">メールアドレス</span></label><input id="email" type="email" placeholder="you@example.com" oninput="render()"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3 その他連絡先 -->
+    <div class="section">
+      <h2><span class="num">3</span><span data-ja="その他連絡先(緊急時)" data-en="Other / Emergency Contact">その他連絡先(緊急時)</span></h2>
+      <div class="section-body">
+        <div class="tip" data-ja="現住所と異なる連絡先(実家・保証人など)。任意です。" data-en="A contact different from your address (family, guarantor…). Optional.">現住所と異なる連絡先(実家・保証人など)。任意です。</div>
+        <div class="grid2">
+          <div class="field"><label><span data-ja="続柄" data-en="Relationship">続柄</span></label><input id="ocRel" placeholder="父 / 保証人 など" oninput="render()"></div>
+          <div class="field"><label><span data-ja="氏名" data-en="Name">氏名</span></label><input id="ocName" placeholder="" oninput="render()"></div>
+        </div>
+        <div class="field"><label><span data-ja="住所" data-en="Address">住所</span></label><input id="ocAddr" placeholder="" oninput="render()"></div>
+        <div class="grid2">
+          <div class="field"><label><span data-ja="電話番号" data-en="Phone">電話番号</span></label><input id="ocPhone" placeholder="" oninput="render()"></div>
+          <div class="field"><label><span data-ja="メール" data-en="Email">メール</span></label><input id="ocEmail" placeholder="" oninput="render()"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4 学歴・職歴 -->
+    <div class="section">
+      <h2><span class="num">4</span><span data-ja="学歴・職歴" data-en="Education & Work">学歴・職歴</span></h2>
+      <div class="section-body">
+        <div class="tip" data-ja="💡 各行で「学歴 / 職歴」を選び、古い順に追加します。学歴→職歴の順で自動整列し、最後に「以上」が付きます。" data-en="💡 Choose 'education / work' per row and add oldest first. They auto-sort (education then work) with '以上' at the end.">💡 各行で「学歴 / 職歴」を選び、古い順に追加します。学歴→職歴の順で自動整列します。</div>
+        <div class="rows" id="histRows"></div>
+        <button class="add-btn" onclick="addHist()">+ <span data-ja="学歴・職歴を追加" data-en="Add entry">学歴・職歴を追加</span></button>
+      </div>
+    </div>
+
+    <!-- 5 免許・資格 -->
+    <div class="section">
+      <h2><span class="num">5</span><span data-ja="免許・資格" data-en="Licenses & Qualifications">免許・資格</span></h2>
+      <div class="section-body">
+        <div class="tip" data-ja="💡 JLPT(日本語能力試験)は強力なアピールです。例:「日本語能力試験 N2 合格」" data-en="💡 The JLPT is a strong selling point. e.g. 'JLPT N2 Passed'">💡 JLPTは強力なアピールです。例:「日本語能力試験 N2 合格」</div>
+        <div class="rows" id="licRows"></div>
+        <button class="add-btn" onclick="addLic()">+ <span data-ja="免許・資格を追加" data-en="Add">免許・資格を追加</span></button>
+      </div>
+    </div>
+
+    <!-- 6 外国人向け情報 -->
+    <div class="section">
+      <h2><span class="num">6</span><span data-ja="在留・語学情報(外国人向け)" data-en="Residence & Language (for foreign applicants)">在留・語学情報(外国人向け)</span></h2>
+      <div class="section-body">
+        <div class="tip" data-ja="💡 企業が最も気にする情報です。在留資格と在留期限は特に重要です。" data-en="💡 What employers care about most. Residence status and its expiry are especially important.">💡 企業が最も気にする情報です。在留資格と在留期限は特に重要です。</div>
+        <div class="grid2">
+          <div class="field">
+            <label><span data-ja="現在、日本に住んでいますか?" data-en="Do you currently live in Japan?">現在、日本に住んでいますか?</span></label>
+            <select id="residence" onchange="render()">
+              <option data-ja="日本に在住" data-en="Living in Japan" value="japan">日本に在住</option>
+              <option data-ja="海外に在住(日本就職を希望)" data-en="Living abroad (seeking work in Japan)" value="abroad">海外に在住(日本就職を希望)</option>
+            </select>
+            <div class="hint" data-ja="海外から日本の仕事に応募する方もこの履歴書を使えます。" data-en="People applying from abroad can use this resume too.">海外から日本の仕事に応募する方もこの履歴書を使えます。</div>
+          </div>
+          <div class="field"><label><span data-ja="現在の居住国" data-en="Current country of residence">現在の居住国</span></label><input id="residenceCountry" placeholder="例:ベトナム / Vietnam" oninput="render()"></div>
+        </div>
+        <div class="grid2">
+          <div class="field"><label><span data-ja="国籍" data-en="Nationality">国籍</span></label><input id="nationality" placeholder="" oninput="render()"></div>
+          <div class="field">
+            <label><span data-ja="在留資格(ビザ)" data-en="Residence status">在留資格(ビザ)</span></label>
+            <select id="visa" onchange="render()">
+              <option value="">—</option>
+              <option data-ja="なし(海外在住・未取得)" data-en="None (abroad / not yet obtained)" value="なし(未取得)">なし(海外在住・未取得)</option>
+              <option>技術・人文知識・国際業務</option><option>特定技能</option><option>技能</option>
+              <option>留学</option><option>家族滞在</option><option>永住者</option>
+              <option>定住者</option><option>日本人の配偶者等</option><option>技能実習</option>
+              <option>特定活動(ワーキングホリデー等)</option><option>その他</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid2">
+          <div class="field"><label><span data-ja="在留期限" data-en="Status expiry">在留期限</span></label><input id="visaExp" type="date" oninput="render()"></div>
+          <div class="field">
+            <label><span data-ja="日本語会話レベル" data-en="Spoken Japanese">日本語会話レベル</span></label>
+            <select id="jpLevel" onchange="render()">
+              <option value="">—</option>
+              <option data-ja="簡単な日常会話" data-en="Basic">簡単な日常会話</option>
+              <option data-ja="日常会話レベル" data-en="Conversational">日常会話レベル</option>
+              <option data-ja="ビジネスレベル" data-en="Business">ビジネスレベル</option>
+              <option data-ja="ネイティブレベル" data-en="Native">ネイティブレベル</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid2">
+          <div class="field"><label><span data-ja="滞日歴" data-en="Years in Japan">滞日歴</span></label><input id="stayYears" placeholder="例:3年 / 3 years" oninput="render()"></div>
+          <div class="field">
+            <label><span data-ja="週の就労可能時間" data-en="Weekly work hours allowed">週の就労可能時間</span></label>
+            <input id="workHours" placeholder="留学生は原則 週28時間まで" oninput="render()">
+            <div class="hint" data-ja="留学生のアルバイト応募で重視されます。" data-en="Important for students applying for part-time jobs.">留学生のアルバイト応募で重視されます。</div>
+          </div>
+        </div>
+        <div class="field" style="max-width:260px">
+          <label><span data-ja="帰国予定(任意)" data-en="Plan to return home (optional)">帰国予定(任意)</span></label>
+          <select id="returnPlan" onchange="render()">
+            <option value="">—</option>
+            <option data-ja="予定なし(長期就労希望)" data-en="No plan (seeking long-term)">予定なし(長期就労希望)</option>
+            <option data-ja="未定" data-en="Undecided">未定</option>
+            <option data-ja="あり" data-en="Yes">あり</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- 7 家族・通勤 -->
+    <div class="section">
+      <h2><span class="num">7</span><span data-ja="通勤・家族" data-en="Commute & Family">通勤・家族</span></h2>
+      <div class="section-body">
+        <div class="grid2">
+          <div class="field"><label><span data-ja="通勤時間" data-en="Commute time">通勤時間</span></label><input id="commute" placeholder="約 1 時間 0 分" oninput="render()"></div>
+          <div class="field">
+            <label><span data-ja="配偶者" data-en="Spouse">配偶者</span></label>
+            <select id="spouse" onchange="render()">
+              <option value="">—</option><option data-ja="無" data-en="None" value="無">無</option><option data-ja="有" data-en="Yes" value="有">有</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid2">
+          <div class="field"><label><span data-ja="扶養家族数(配偶者を除く)" data-en="Dependents (excl. spouse)">扶養家族数(配偶者を除く)</span></label><input id="dependents" type="number" placeholder="0" oninput="render()"></div>
+          <div class="field">
+            <label><span data-ja="配偶者の扶養義務" data-en="Spouse support obligation">配偶者の扶養義務</span></label>
+            <select id="spouseSupport" onchange="render()">
+              <option value="">—</option><option data-ja="無" data-en="No" value="無">無</option><option data-ja="有" data-en="Yes" value="有">有</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 8 AI: 志望動機・自己PR・本人希望 -->
+    <div class="section">
+      <h2><span class="num">8</span><span data-ja="志望動機・自己PR・本人希望" data-en="Motivation / Self-PR / Requests">志望動機・自己PR・本人希望</span> <span class="ai-badge">✦ AI</span></h2>
+      <div class="section-body">
+        <div class="tip" data-ja="✦ AI機能は claude.ai 上でこのファイルを開いたときに動作します。母語で書いた内容を、履歴書にふさわしい日本語に変換できます。" data-en="✦ AI works when this file is opened on claude.ai. Write in your own language and turn it into proper Japanese.">✦ AI機能は claude.ai 上で動作します。母語で書いた内容を履歴書にふさわしい日本語に変換できます。</div>
+
+        <!-- 志望動機 -->
+        <div class="field">
+          <label><span data-ja="志望動機" data-en="Motivation">志望動機</span></label>
+          <textarea id="motivation" placeholder="..." oninput="render()"></textarea>
+        </div>
+        <div class="ai-panel">
+          <div class="row">
+            <input id="m_company" placeholder="応募先(会社名・職種) / Company・Role" style="flex:1;min-width:160px">
+          </div>
+          <textarea id="m_keywords" placeholder="伝えたいこと(どの言語でもOK):強み・経験・なぜこの仕事か / Your strengths, experience, why this job — any language" style="min-height:60px"></textarea>
+          <div class="ai-row-btns">
+            <button class="ai-btn" id="m_gen" onclick="genMotivation()"><span data-ja="✦ AIで志望動機を作成" data-en="✦ Generate motivation">✦ AIで志望動機を作成</span></button>
+          </div>
+        </div>
+
+        <!-- 自己PR -->
+        <div class="field" style="margin-top:6px">
+          <label><span data-ja="自己PR・趣味・特技" data-en="Self-PR / hobbies">自己PR・趣味・特技</span></label>
+          <textarea id="selfpr" placeholder="..." oninput="render()"></textarea>
+        </div>
+        <div class="ai-panel">
+          <textarea id="p_keywords" placeholder="あなたの強み・性格・趣味・実績(どの言語でもOK) / Your strengths, personality, hobbies — any language" style="min-height:60px"></textarea>
+          <div class="ai-row-btns">
+            <button class="ai-btn" id="p_gen" onclick="genSelfPR()"><span data-ja="✦ AIで自己PRを作成" data-en="✦ Generate self-PR">✦ AIで自己PRを作成</span></button>
+          </div>
+        </div>
+
+        <!-- 本人希望 -->
+        <div class="field" style="margin-top:6px">
+          <label><span data-ja="本人希望記入欄" data-en="Personal requests">本人希望記入欄</span></label>
+          <textarea id="wishes" placeholder="例:貴社の規定に従います。" oninput="render()"></textarea>
+        </div>
+        <div class="ai-row-btns">
+          <button class="ai-btn ghost" id="w_default" onclick="fillDefaultWish()"><span data-ja="定番文を入れる" data-en="Insert standard phrase">定番文を入れる</span></button>
+        </div>
+
+        <!-- 共通ツール -->
+        <div class="ai-panel" style="margin-top:6px">
+          <div class="mini" data-ja="✦ 仕上げツール(志望動機・自己PRの本文に対して)" data-en="✦ Polish tools (apply to the text fields above)">✦ 仕上げツール</div>
+          <div class="row">
+            <select id="tool_target" style="flex:1;min-width:120px">
+              <option value="motivation" data-ja="対象:志望動機" data-en="Target: Motivation">対象:志望動機</option>
+              <option value="selfpr" data-ja="対象:自己PR" data-en="Target: Self-PR">対象:自己PR</option>
+            </select>
+          </div>
+          <div class="ai-row-btns">
+            <button class="ai-btn ghost" id="t_polish" onclick="polishJP()"><span data-ja="日本語を自然・丁寧にする" data-en="Make Japanese natural & polite">日本語を自然・丁寧にする</span></button>
+            <button class="ai-btn ghost" id="t_trans" onclick="translateOut()"><span data-ja="英語に翻訳して確認" data-en="Translate to English to check">英語に翻訳して確認</span></button>
+          </div>
+          <div id="ai_out" class="hint" style="white-space:pre-wrap"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PREVIEW -->
+  <div class="preview-col">
+    <div class="preview-bar">
+      <span data-ja="ライブプレビュー" data-en="Live preview">ライブプレビュー</span>
+      <span data-ja="入力すると自動反映" data-en="Updates as you type">入力すると自動反映</span>
+    </div>
+    <div class="doc-scale"><div id="sheet"></div></div>
+  </div>
+</div>
+
+<script>
+let lang='ja', hist=[], lic=[], photoData=null;
+
+const T={
+  enrolled:{ja:'入学',en:'入学'},graduated:{ja:'卒業',en:'卒業'},dropout:{ja:'中退',en:'中退'},
+  enrolling:{ja:'在学中',en:'在学中'},joined:{ja:'入社',en:'入社'},resigned:{ja:'退職',en:'退職'},
+  onleave:{ja:'休職中',en:'休職中'},working:{ja:'就業中',en:'就業中'},free:{ja:'その他(自由記入)',en:'Other (free text)'},
+  present:{ja:'現在に至る',en:'現在に至る'},end:{ja:'以上',en:'以上'},none:{ja:'なし',en:'なし'},
+  edu:{ja:'学歴',en:'学歴'},work:{ja:'職歴',en:'職歴'},license:{ja:'免許',en:'免許'},qual:{ja:'資格',en:'資格'},
+  yr:{ja:'年',en:'Year'},mo:{ja:'月',en:'Mon'},
+};
+function tr(k){return T[k]?(T[k][lang]||T[k].en||T[k].ja):k;}
+
+/* ===== 多言語辞書 (英語の文言をキーにする / 未訳は英語へフォールバック) =====
+   注意: ne/ur/hi 等は機械翻訳の初稿。本番前にネイティブ確認を推奨。 */
+const I18N={
+  vi:{"Japanese resume maker for foreign residents + AI":"Công cụ tạo sơ yếu lý lịch Nhật cho người nước ngoài + AI","Save PDF (2×A4)":"Lưu PDF (2×A4)","A3 spread (konbini)":"Khổ A3 (in ở konbini)","Reset":"Đặt lại","Live preview":"Xem trước trực tiếp","Updates as you type":"Cập nhật khi bạn nhập","Basic Information":"Thông tin cơ bản","Address & Contact":"Địa chỉ & Liên hệ","Other / Emergency Contact":"Liên hệ khác / Khẩn cấp","Education & Work":"Học vấn & Kinh nghiệm làm việc","Licenses & Qualifications":"Bằng cấp & Chứng chỉ","Residence & Language (for foreign applicants)":"Tư cách lưu trú & Ngôn ngữ (cho người nước ngoài)","Commute & Family":"Đi làm & Gia đình","Motivation / Self-PR / Requests":"Động cơ / Giới thiệu bản thân / Nguyện vọng","Do you currently live in Japan?":"Bạn có đang sống ở Nhật không?","Living in Japan":"Đang sống ở Nhật","Living abroad (seeking work in Japan)":"Đang sống ở nước ngoài (muốn làm việc tại Nhật)","Current country of residence":"Quốc gia cư trú hiện tại","Name (as on passport)":"Họ tên (như trên hộ chiếu)","Furigana":"Furigana (cách đọc)","Birth year":"Năm sinh","Month":"Tháng","Day":"Ngày","Gender":"Giới tính","Male":"Nam","Female":"Nữ","ID photo":"Ảnh thẻ","Upload photo":"Tải ảnh lên","Postal code":"Mã bưu điện","Prefecture–town":"Tỉnh – phường/xã","Address":"Địa chỉ","Phone":"Số điện thoại","Email":"Email","Relationship":"Quan hệ","Name":"Họ tên","Add entry":"Thêm mục","Add":"Thêm","Nationality":"Quốc tịch","Residence status":"Tư cách lưu trú","Status expiry":"Hạn lưu trú","Spoken Japanese":"Tiếng Nhật giao tiếp","Years in Japan":"Số năm ở Nhật","Weekly work hours allowed":"Số giờ được phép làm/tuần","Plan to return home (optional)":"Dự định về nước (tùy chọn)","Commute time":"Thời gian đi làm","Spouse":"Vợ/chồng","Dependents (excl. spouse)":"Số người phụ thuộc (trừ vợ/chồng)","Spouse support obligation":"Nghĩa vụ chu cấp vợ/chồng","Motivation":"Động cơ ứng tuyển","Self-PR / hobbies":"Giới thiệu bản thân / Sở thích","Personal requests":"Nguyện vọng cá nhân","✦ Generate motivation":"✦ Tạo động cơ bằng AI","✦ Generate self-PR":"✦ Tạo giới thiệu bản thân bằng AI"},
+  id:{"Japanese resume maker for foreign residents + AI":"Pembuat rirekisho Jepang untuk warga asing + AI","Save PDF (2×A4)":"Simpan PDF (2×A4)","A3 spread (konbini)":"Lipat A3 (untuk konbini)","Reset":"Atur ulang","Live preview":"Pratinjau langsung","Updates as you type":"Diperbarui saat Anda mengetik","Basic Information":"Informasi Dasar","Address & Contact":"Alamat & Kontak","Other / Emergency Contact":"Kontak Lain / Darurat","Education & Work":"Pendidikan & Pengalaman Kerja","Licenses & Qualifications":"Lisensi & Sertifikat","Residence & Language (for foreign applicants)":"Status Tinggal & Bahasa (untuk pelamar asing)","Commute & Family":"Perjalanan & Keluarga","Motivation / Self-PR / Requests":"Motivasi / Promosi Diri / Permintaan","Do you currently live in Japan?":"Apakah Anda tinggal di Jepang saat ini?","Living in Japan":"Tinggal di Jepang","Living abroad (seeking work in Japan)":"Tinggal di luar negeri (ingin bekerja di Jepang)","Current country of residence":"Negara tempat tinggal saat ini","Name (as on passport)":"Nama (sesuai paspor)","Furigana":"Furigana (cara baca)","Birth year":"Tahun lahir","Month":"Bulan","Day":"Tanggal","Gender":"Jenis kelamin","Male":"Laki-laki","Female":"Perempuan","ID photo":"Foto identitas","Upload photo":"Unggah foto","Postal code":"Kode pos","Prefecture–town":"Prefektur – kota","Address":"Alamat","Phone":"Telepon","Email":"Email","Relationship":"Hubungan","Name":"Nama","Add entry":"Tambah entri","Add":"Tambah","Nationality":"Kewarganegaraan","Residence status":"Status tinggal","Status expiry":"Masa berlaku izin","Spoken Japanese":"Percakapan bahasa Jepang","Years in Japan":"Lama tinggal di Jepang","Weekly work hours allowed":"Jam kerja per minggu yang diizinkan","Plan to return home (optional)":"Rencana pulang (opsional)","Commute time":"Waktu perjalanan ke kantor","Spouse":"Pasangan","Dependents (excl. spouse)":"Tanggungan (selain pasangan)","Spouse support obligation":"Kewajiban menafkahi pasangan","Motivation":"Motivasi melamar","Self-PR / hobbies":"Promosi diri / Hobi","Personal requests":"Permintaan pribadi","✦ Generate motivation":"✦ Buat motivasi dengan AI","✦ Generate self-PR":"✦ Buat promosi diri dengan AI"},
+  zh:{"Japanese resume maker for foreign residents + AI":"面向在日外国人的日式简历制作工具 + AI","Save PDF (2×A4)":"保存PDF（2张A4）","A3 spread (konbini)":"A3跨页（便利店打印用）","Reset":"重置","Live preview":"实时预览","Updates as you type":"输入时自动更新","Basic Information":"基本信息","Address & Contact":"地址与联系方式","Other / Emergency Contact":"其他联系方式（紧急）","Education & Work":"学历与工作经历","Licenses & Qualifications":"执照与资格","Residence & Language (for foreign applicants)":"在留资格与语言（面向外国人）","Commute & Family":"通勤与家庭","Motivation / Self-PR / Requests":"志望动机／自我推荐／本人希望","Do you currently live in Japan?":"您目前居住在日本吗？","Living in Japan":"居住在日本","Living abroad (seeking work in Japan)":"居住在海外（希望在日本就业）","Current country of residence":"目前居住国家","Name (as on passport)":"姓名（与护照一致）","Furigana":"假名（读音）","Birth year":"出生年","Month":"月","Day":"日","Gender":"性别","Male":"男","Female":"女","ID photo":"证件照","Upload photo":"上传照片","Postal code":"邮政编码","Prefecture–town":"都道府县～町名","Address":"地址","Phone":"电话","Email":"电子邮箱","Relationship":"关系","Name":"姓名","Add entry":"添加条目","Add":"添加","Nationality":"国籍","Residence status":"在留资格","Status expiry":"在留期限","Spoken Japanese":"日语会话水平","Years in Japan":"在日年数","Weekly work hours allowed":"每周可工作时间","Plan to return home (optional)":"回国计划（可选）","Commute time":"通勤时间","Spouse":"配偶","Dependents (excl. spouse)":"抚养人数（不含配偶）","Spouse support obligation":"对配偶的抚养义务","Motivation":"应聘动机","Self-PR / hobbies":"自我推荐／兴趣特长","Personal requests":"本人希望栏","✦ Generate motivation":"✦ 用AI生成志望动机","✦ Generate self-PR":"✦ 用AI生成自我推荐"},
+  ne:{"Japanese resume maker for foreign residents + AI":"विदेशीहरूका लागि जापानी रिजुमे बनाउने उपकरण + AI","Save PDF (2×A4)":"PDF सुरक्षित गर्नुहोस् (2×A4)","A3 spread (konbini)":"A3 स्प्रेड (कोन्बिनीका लागि)","Reset":"रिसेट गर्नुहोस्","Live preview":"प्रत्यक्ष पूर्वावलोकन","Updates as you type":"टाइप गर्दा अपडेट हुन्छ","Basic Information":"आधारभूत जानकारी","Address & Contact":"ठेगाना र सम्पर्क","Other / Emergency Contact":"अन्य / आपतकालीन सम्पर्क","Education & Work":"शिक्षा र कामको अनुभव","Licenses & Qualifications":"लाइसेन्स र योग्यता","Residence & Language (for foreign applicants)":"बसोबास स्थिति र भाषा (विदेशीका लागि)","Commute & Family":"यात्रा र परिवार","Motivation / Self-PR / Requests":"उद्देश्य / आत्म-परिचय / अनुरोध","Do you currently live in Japan?":"के तपाईं अहिले जापानमा बस्नुहुन्छ?","Living in Japan":"जापानमा बस्दै","Living abroad (seeking work in Japan)":"विदेशमा बस्दै (जापानमा काम खोज्दै)","Current country of residence":"हालको बसोबास देश","Name (as on passport)":"नाम (राहदानी अनुसार)","Furigana":"फुरिगाना (उच्चारण)","Birth year":"जन्म वर्ष","Month":"महिना","Day":"दिन","Gender":"लिङ्ग","Male":"पुरुष","Female":"महिला","ID photo":"परिचयपत्र फोटो","Upload photo":"फोटो अपलोड गर्नुहोस्","Postal code":"पोस्टल कोड","Prefecture–town":"प्रिफेक्चर – सहर","Address":"ठेगाना","Phone":"फोन","Email":"इमेल","Relationship":"नाता","Name":"नाम","Add entry":"प्रविष्टि थप्नुहोस्","Add":"थप्नुहोस्","Nationality":"राष्ट्रियता","Residence status":"बसोबास स्थिति","Status expiry":"अवधि समाप्ति","Spoken Japanese":"जापानी बोलचाल","Years in Japan":"जापानमा बसेको वर्ष","Weekly work hours allowed":"साप्ताहिक अनुमत कार्य घण्टा","Plan to return home (optional)":"स्वदेश फर्कने योजना (वैकल्पिक)","Commute time":"यात्रा समय","Spouse":"जीवनसाथी","Dependents (excl. spouse)":"आश्रित (जीवनसाथी बाहेक)","Spouse support obligation":"जीवनसाथी पालनको दायित्व","Motivation":"आवेदनको उद्देश्य","Self-PR / hobbies":"आत्म-परिचय / रुचि","Personal requests":"व्यक्तिगत अनुरोध","✦ Generate motivation":"✦ AI बाट उद्देश्य बनाउनुहोस्","✦ Generate self-PR":"✦ AI बाट आत्म-परिचय बनाउनुहोस्"},
+  ur:{"Japanese resume maker for foreign residents + AI":"غیر ملکیوں کے لیے جاپانی ریزیومے بنانے کا ٹول + AI","Save PDF (2×A4)":"PDF محفوظ کریں (2×A4)","A3 spread (konbini)":"A3 اسپریڈ (کونبینی کے لیے)","Reset":"ری سیٹ","Live preview":"لائیو پیش منظر","Updates as you type":"ٹائپ کرتے ہی اپ ڈیٹ","Basic Information":"بنیادی معلومات","Address & Contact":"پتہ اور رابطہ","Other / Emergency Contact":"دیگر / ہنگامی رابطہ","Education & Work":"تعلیم اور کام کا تجربہ","Licenses & Qualifications":"لائسنس اور قابلیتیں","Residence & Language (for foreign applicants)":"قیام کی حیثیت اور زبان (غیر ملکیوں کے لیے)","Commute & Family":"آمد و رفت اور خاندان","Motivation / Self-PR / Requests":"وجہِ درخواست / خود تعارف / خواہشات","Do you currently live in Japan?":"کیا آپ اس وقت جاپان میں رہتے ہیں؟","Living in Japan":"جاپان میں مقیم","Living abroad (seeking work in Japan)":"بیرونِ ملک مقیم (جاپان میں کام کے خواہشمند)","Current country of residence":"موجودہ ملکِ رہائش","Name (as on passport)":"نام (پاسپورٹ کے مطابق)","Furigana":"فوریگانا (تلفظ)","Birth year":"سالِ پیدائش","Month":"مہینہ","Day":"دن","Gender":"جنس","Male":"مرد","Female":"عورت","ID photo":"شناختی تصویر","Upload photo":"تصویر اپ لوڈ کریں","Postal code":"پوسٹل کوڈ","Prefecture–town":"پریفیکچر – شہر","Address":"پتہ","Phone":"فون","Email":"ای میل","Relationship":"رشتہ","Name":"نام","Add entry":"اندراج شامل کریں","Add":"شامل کریں","Nationality":"قومیت","Residence status":"قیام کی حیثیت","Status expiry":"میعاد ختم ہونے کی تاریخ","Spoken Japanese":"جاپانی گفتگو","Years in Japan":"جاپان میں قیام کے سال","Weekly work hours allowed":"ہفتہ وار اجازت شدہ کام کے گھنٹے","Plan to return home (optional)":"وطن واپسی کا ارادہ (اختیاری)","Commute time":"آمد و رفت کا وقت","Spouse":"شریکِ حیات","Dependents (excl. spouse)":"زیرِ کفالت افراد (شریکِ حیات کے علاوہ)","Spouse support obligation":"شریکِ حیات کی کفالت کی ذمہ داری","Motivation":"درخواست کی وجہ","Self-PR / hobbies":"خود تعارف / مشاغل","Personal requests":"ذاتی خواہشات","✦ Generate motivation":"✦ AI سے وجہِ درخواست بنائیں","✦ Generate self-PR":"✦ AI سے خود تعارف بنائیں"},
+  hi:{"Japanese resume maker for foreign residents + AI":"विदेशियों के लिए जापानी रिज़्यूमे बनाने का टूल + AI","Save PDF (2×A4)":"PDF सहेजें (2×A4)","A3 spread (konbini)":"A3 स्प्रेड (कोंबिनी के लिए)","Reset":"रीसेट","Live preview":"लाइव पूर्वावलोकन","Updates as you type":"टाइप करते ही अपडेट","Basic Information":"बुनियादी जानकारी","Address & Contact":"पता और संपर्क","Other / Emergency Contact":"अन्य / आपातकालीन संपर्क","Education & Work":"शिक्षा और कार्य अनुभव","Licenses & Qualifications":"लाइसेंस और योग्यताएँ","Residence & Language (for foreign applicants)":"निवास स्थिति और भाषा (विदेशियों के लिए)","Commute & Family":"आवागमन और परिवार","Motivation / Self-PR / Requests":"उद्देश्य / आत्म-परिचय / अनुरोध","Do you currently live in Japan?":"क्या आप इस समय जापान में रहते हैं?","Living in Japan":"जापान में रहते हैं","Living abroad (seeking work in Japan)":"विदेश में रहते हैं (जापान में काम चाहते हैं)","Current country of residence":"वर्तमान निवास देश","Name (as on passport)":"नाम (पासपोर्ट के अनुसार)","Furigana":"फुरिगाना (उच्चारण)","Birth year":"जन्म वर्ष","Month":"माह","Day":"दिन","Gender":"लिंग","Male":"पुरुष","Female":"महिला","ID photo":"पहचान फोटो","Upload photo":"फोटो अपलोड करें","Postal code":"पिन कोड","Prefecture–town":"प्रान्त – शहर","Address":"पता","Phone":"फ़ोन","Email":"ईमेल","Relationship":"रिश्ता","Name":"नाम","Add entry":"प्रविष्टि जोड़ें","Add":"जोड़ें","Nationality":"राष्ट्रीयता","Residence status":"निवास स्थिति","Status expiry":"वैधता समाप्ति","Spoken Japanese":"जापानी बोलचाल","Years in Japan":"जापान में वर्ष","Weekly work hours allowed":"साप्ताहिक अनुमत कार्य घंटे","Plan to return home (optional)":"स्वदेश लौटने की योजना (वैकल्पिक)","Commute time":"आवागमन समय","Spouse":"जीवनसाथी","Dependents (excl. spouse)":"आश्रित (जीवनसाथी को छोड़कर)","Spouse support obligation":"जीवनसाथी भरण-पोषण दायित्व","Motivation":"आवेदन का उद्देश्य","Self-PR / hobbies":"आत्म-परिचय / शौक","Personal requests":"व्यक्तिगत अनुरोध","✦ Generate motivation":"✦ AI से उद्देश्य बनाएँ","✦ Generate self-PR":"✦ AI से आत्म-परिचय बनाएँ"},
+  ko:{"Japanese resume maker for foreign residents + AI":"외국인을 위한 일본식 이력서 작성 도구 + AI","Save PDF (2×A4)":"PDF 저장 (A4 2장)","A3 spread (konbini)":"A3 펼침 (편의점 인쇄용)","Reset":"초기화","Live preview":"실시간 미리보기","Updates as you type":"입력하면 자동 반영","Basic Information":"기본 정보","Address & Contact":"주소 및 연락처","Other / Emergency Contact":"기타 / 비상 연락처","Education & Work":"학력 및 경력","Licenses & Qualifications":"면허 및 자격","Residence & Language (for foreign applicants)":"체류 자격 및 언어 (외국인용)","Commute & Family":"통근 및 가족","Motivation / Self-PR / Requests":"지원 동기 / 자기소개 / 희망 사항","Do you currently live in Japan?":"현재 일본에 거주하고 있습니까?","Living in Japan":"일본에 거주","Living abroad (seeking work in Japan)":"해외에 거주 (일본 취업 희망)","Current country of residence":"현재 거주 국가","Name (as on passport)":"이름 (여권 표기)","Furigana":"후리가나 (발음)","Birth year":"출생 연도","Month":"월","Day":"일","Gender":"성별","Male":"남성","Female":"여성","ID photo":"증명사진","Upload photo":"사진 업로드","Postal code":"우편번호","Prefecture–town":"도도부현～동명","Address":"주소","Phone":"전화번호","Email":"이메일","Relationship":"관계","Name":"이름","Add entry":"항목 추가","Add":"추가","Nationality":"국적","Residence status":"체류 자격","Status expiry":"체류 기한","Spoken Japanese":"일본어 회화","Years in Japan":"일본 체류 기간","Weekly work hours allowed":"주당 가능 근무시간","Plan to return home (optional)":"귀국 예정 (선택)","Commute time":"통근 시간","Spouse":"배우자","Dependents (excl. spouse)":"부양가족 수 (배우자 제외)","Spouse support obligation":"배우자 부양 의무","Motivation":"지원 동기","Self-PR / hobbies":"자기소개 / 취미·특기","Personal requests":"본인 희망란","✦ Generate motivation":"✦ AI로 지원 동기 작성","✦ Generate self-PR":"✦ AI로 자기소개 작성"},
+  pt:{"Japanese resume maker for foreign residents + AI":"Criador de currículo japonês para estrangeiros + IA","Save PDF (2×A4)":"Salvar PDF (2×A4)","A3 spread (konbini)":"A3 dobrado (para konbini)","Reset":"Redefinir","Live preview":"Pré-visualização ao vivo","Updates as you type":"Atualiza enquanto você digita","Basic Information":"Informações básicas","Address & Contact":"Endereço e contato","Other / Emergency Contact":"Outro contato / Emergência","Education & Work":"Formação e experiência profissional","Licenses & Qualifications":"Licenças e qualificações","Residence & Language (for foreign applicants)":"Status de residência e idioma (para estrangeiros)","Commute & Family":"Deslocamento e família","Motivation / Self-PR / Requests":"Motivação / Autoapresentação / Pedidos","Do you currently live in Japan?":"Você mora no Japão atualmente?","Living in Japan":"Morando no Japão","Living abroad (seeking work in Japan)":"Morando no exterior (buscando trabalho no Japão)","Current country of residence":"País de residência atual","Name (as on passport)":"Nome (como no passaporte)","Furigana":"Furigana (leitura)","Birth year":"Ano de nascimento","Month":"Mês","Day":"Dia","Gender":"Sexo","Male":"Masculino","Female":"Feminino","ID photo":"Foto de identificação","Upload photo":"Enviar foto","Postal code":"CEP","Prefecture–town":"Província – cidade","Address":"Endereço","Phone":"Telefone","Email":"E-mail","Relationship":"Relação","Name":"Nome","Add entry":"Adicionar item","Add":"Adicionar","Nationality":"Nacionalidade","Residence status":"Status de residência","Status expiry":"Validade do visto","Spoken Japanese":"Conversação em japonês","Years in Japan":"Anos no Japão","Weekly work hours allowed":"Horas de trabalho semanais permitidas","Plan to return home (optional)":"Plano de retorno ao país (opcional)","Commute time":"Tempo de deslocamento","Spouse":"Cônjuge","Dependents (excl. spouse)":"Dependentes (exceto cônjuge)","Spouse support obligation":"Obrigação de sustento do cônjuge","Motivation":"Motivo da candidatura","Self-PR / hobbies":"Autoapresentação / Hobbies","Personal requests":"Pedidos pessoais","✦ Generate motivation":"✦ Gerar motivação com IA","✦ Generate self-PR":"✦ Gerar autoapresentação com IA"}
+};
+
+function setLang(l){
+  lang=l;
+  document.documentElement.lang=l;
+  document.documentElement.dir=(l==='ur'?'rtl':'ltr');
+  document.querySelectorAll('[data-ja]').forEach(el=>{
+    const ja=el.getAttribute('data-ja'), en=el.getAttribute('data-en');
+    let txt;
+    if(l==='ja') txt=ja;
+    else if(l==='en') txt=en;
+    else txt=(I18N[l]&&en&&I18N[l][en])||en||ja;
+    if(txt!=null) el.textContent=txt;
+  });
+  const sel=document.getElementById('langSel'); if(sel&&sel.value!==l) sel.value=l;
+  renderHistRows();renderLicRows();render();
+}
+
+/* 和暦 */
+function wareki(y,m){
+  y=parseInt(y);m=parseInt(m)||1;if(!y)return'';
+  if(y>2019||(y===2019&&m>=5))return'令和'+(y-2018===1?'元':(y-2018));
+  if(y>=1989)return'平成'+(y-1988===1?'元':(y-1988));
+  if(y>1926||(y===1926&&m>=12))return'昭和'+(y-1925===1?'元':(y-1925));
+  if(y>1912||(y===1912&&m>=7))return'大正'+(y-1911===1?'元':(y-1911));
+  return'明治'+(y-1867);
+}
+function calcAge(y,m,d){
+  y=+y;m=+m;d=+d;if(!y||!m||!d)return'';
+  const t=new Date();let a=t.getFullYear()-y;
+  if(t.getMonth()+1<m||(t.getMonth()+1===m&&t.getDate()<d))a--;
+  return a>=0&&a<120?a:'';
+}
+
+/* 郵便番号 (best effort) */
+async function lookupZip(){
+  const z=document.getElementById('zip').value.replace(/[^0-9]/g,'');
+  const msg=document.getElementById('zipMsg');
+  if(z.length!==7){msg.textContent=lang==='ja'?'7桁で入力してください':'Enter 7 digits';return;}
+  msg.textContent=lang==='ja'?'検索中...':'Searching...';
+  try{
+    const r=await fetch('https://zipcloud.ibsnet.co.jp/api/search?zipcode='+z);
+    const d=await r.json();
+    if(d.results&&d.results[0]){
+      const a=d.results[0];
+      document.getElementById('addr1').value=a.address1+a.address2+a.address3;
+      msg.textContent=lang==='ja'?'入力しました':'Filled';render();
+    }else{msg.textContent=lang==='ja'?'見つかりませんでした。手入力してください。':'Not found — please type manually.';}
+  }catch(e){msg.textContent=lang==='ja'?'自動入力は利用できません。手入力してください。':'Auto-fill unavailable — please type manually.';}
+}
+
+/* rows */
+function addHist(){hist.push({type:'edu',year:'',month:'',name:'',detail:'',status:'enrolled'});renderHistRows();render();}
+function addLic(){lic.push({type:'qual',year:'',month:'',name:''});renderLicRows();render();}
+
+function eduStatusOpts(s){return['enrolled','graduated','dropout','enrolling','free'].map(k=>`<option value="${k}" ${s===k?'selected':''}>${tr(k)}</option>`).join('');}
+function workStatusOpts(s){return['joined','resigned','onleave','working','free'].map(k=>`<option value="${k}" ${s===k?'selected':''}>${tr(k)}</option>`).join('');}
+
+function renderHistRows(){
+  const c=document.getElementById('histRows');c.innerHTML='';
+  hist.forEach((r,i)=>{
+    const isEdu=r.type==='edu';
+    const d=document.createElement('div');d.className='row-item';
+    d.innerHTML=`
+      <button class="del" onclick="hist.splice(${i},1);renderHistRows();render()">×</button>
+      <div class="radio-pill">
+        <label><input type="radio" name="ht${i}" ${isEdu?'checked':''} onchange="hist[${i}].type='edu';hist[${i}].status='enrolled';renderHistRows();render()">${tr('edu')}</label>
+        <label><input type="radio" name="ht${i}" ${!isEdu?'checked':''} onchange="hist[${i}].type='work';hist[${i}].status='joined';renderHistRows();render()">${tr('work')}</label>
+      </div>
+      <div class="grid3">
+        <div><div class="mini">${tr('yr')}(西暦)</div><input type="number" placeholder="2018" value="${r.year}" oninput="hist[${i}].year=this.value;render()"></div>
+        <div><div class="mini">${tr('mo')}</div><input type="number" placeholder="4" value="${r.month}" oninput="hist[${i}].month=this.value;render()"></div>
+        <div><div class="mini">状態</div><select onchange="hist[${i}].status=this.value;renderHistRows();render()">${isEdu?eduStatusOpts(r.status):workStatusOpts(r.status)}</select>${r.status==='free'?`<input style="margin-top:6px" placeholder="${lang==='ja'?'例:契約満了により退職／現在に至る':'free text'}" value="${(r.statusFree||'').replace(/"/g,'&quot;')}" oninput="hist[${i}].statusFree=this.value;render()">`:''}</div>
+      </div>
+      <div class="grid2">
+        <div><div class="mini">${isEdu?(lang==='ja'?'学校名':'School'):(lang==='ja'?'会社名':'Company')}</div><input value="${(r.name||'').replace(/"/g,'&quot;')}" oninput="hist[${i}].name=this.value;render()"></div>
+        <div><div class="mini">${isEdu?(lang==='ja'?'学部・専攻':'Major'):(lang==='ja'?'部署・職位':'Dept / Title')}</div><input value="${(r.detail||'').replace(/"/g,'&quot;')}" oninput="hist[${i}].detail=this.value;render()"></div>
+      </div>`;
+    c.appendChild(d);
+  });
+}
+function renderLicRows(){
+  const c=document.getElementById('licRows');c.innerHTML='';
+  lic.forEach((r,i)=>{
+    const d=document.createElement('div');d.className='row-item';
+    d.innerHTML=`
+      <button class="del" onclick="lic.splice(${i},1);renderLicRows();render()">×</button>
+      <div class="grid3">
+        <div><div class="mini">${tr('yr')}</div><input type="number" placeholder="2023" value="${r.year}" oninput="lic[${i}].year=this.value;render()"></div>
+        <div><div class="mini">${tr('mo')}</div><input type="number" placeholder="7" value="${r.month}" oninput="lic[${i}].month=this.value;render()"></div>
+        <div><div class="mini">区分</div><select onchange="lic[${i}].type=this.value;render()"><option value="license" ${r.type==='license'?'selected':''}>${tr('license')}</option><option value="qual" ${r.type==='qual'?'selected':''}>${tr('qual')}</option></select></div>
+      </div>
+      <div><div class="mini">${lang==='ja'?'内容':'Content'}</div><input placeholder="日本語能力試験 N2 合格" value="${(r.name||'').replace(/"/g,'&quot;')}" oninput="lic[${i}].name=this.value;render()"></div>`;
+    c.appendChild(d);
+  });
+}
+
+function loadPhoto(e){const f=e.target.files[0];if(!f)return;const rd=new FileReader();
+  rd.onload=ev=>{photoData=ev.target.result;document.getElementById('photoPrev').innerHTML='<img src="'+photoData+'">';render();};rd.readAsDataURL(f);}
+
+/* ===== AI (Claude in Claude) ===== */
+async function callClaude(prompt){
+  // APIキーはブラウザに置かない。自社サーバー(/api/generate)経由で安全に呼ぶ。
+  const res=await fetch("/api/generate",{
+    method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({prompt})
+  });
+  if(!res.ok)throw new Error('http '+res.status);
+  const data=await res.json();
+  return (data.text||'').trim();
+}
+function busy(id,on,label){
+  const b=document.getElementById(id);b.disabled=on;
+  b.dataset.lbl=b.dataset.lbl||b.innerHTML;
+  b.innerHTML=on?`<span class="spin"></span>${lang==='ja'?'生成中...':'Working...'}`:b.dataset.lbl;
+}
+function aiErr(){const m=lang==='ja'?'AIの呼び出しに失敗しました。claude.ai上で開いているか、通信状況をご確認ください。':'AI call failed. Make sure this is opened on claude.ai and you are online.';
+  document.getElementById('ai_out').textContent=m;}
+
+async function genMotivation(){
+  const kw=document.getElementById('m_keywords').value.trim();
+  const co=document.getElementById('m_company').value.trim();
+  if(!kw){alert(lang==='ja'?'伝えたい内容を入力してください':'Please enter your points');return;}
+  busy('m_gen',true);
+  try{
+    const p=`あなたは日本の就職活動を支援するプロのキャリアアドバイザーです。外国人求職者の履歴書に記載する「志望動機」を作成してください。
+条件: ・自然で丁寧な日本語(です・ます調) ・180〜220字程度 ・謙虚かつ前向き ・誇張しない ・日本のビジネスマナーに沿う
+応募先: ${co||'(未指定)'}
+本人が伝えたい内容(言語は問わない): ${kw}
+出力は志望動機の本文のみ。前置き・説明・引用符は不要。`;
+    document.getElementById('motivation').value=await callClaude(p);render();
+  }catch(e){aiErr();}finally{busy('m_gen',false);}
+}
+async function genSelfPR(){
+  const kw=document.getElementById('p_keywords').value.trim();
+  if(!kw){alert(lang==='ja'?'あなたの強みなどを入力してください':'Please enter your strengths');return;}
+  busy('p_gen',true);
+  try{
+    const p=`あなたは日本の就職活動を支援するプロのキャリアアドバイザーです。外国人求職者の履歴書に記載する「自己PR」を作成してください。
+条件: ・自然で丁寧な日本語(です・ます調) ・180〜220字程度 ・具体的な強みや経験を盛り込む ・前向きで誠実 ・誇張しない
+本人の情報(言語は問わない): ${kw}
+出力は自己PRの本文のみ。前置き・説明・引用符は不要。`;
+    document.getElementById('selfpr').value=await callClaude(p);render();
+  }catch(e){aiErr();}finally{busy('p_gen',false);}
+}
+function fillDefaultWish(){
+  document.getElementById('wishes').value=lang==='ja'?'貴社の規定に従います。':'貴社の規定に従います。';render();
+}
+async function polishJP(){
+  const t=document.getElementById('tool_target').value;
+  const cur=document.getElementById(t).value.trim();
+  if(!cur){alert(lang==='ja'?'対象の本文が空です':'Target text is empty');return;}
+  busy('t_polish',true);
+  try{
+    const p=`次の文章を、日本の履歴書にふさわしい自然で丁寧なビジネス日本語(です・ます調)に書き直してください。意味は変えず、誇張しないこと。出力は本文のみ:\n\n${cur}`;
+    document.getElementById(t).value=await callClaude(p);
+    document.getElementById('ai_out').textContent=lang==='ja'?'✓ 自然な日本語に整えました。':'✓ Polished.';render();
+  }catch(e){aiErr();}finally{busy('t_polish',false);}
+}
+async function translateOut(){
+  const t=document.getElementById('tool_target').value;
+  const cur=document.getElementById(t).value.trim();
+  if(!cur){alert(lang==='ja'?'対象の本文が空です':'Target text is empty');return;}
+  busy('t_trans',true);
+  try{
+    const p=`次の日本語を自然な英語に翻訳してください。翻訳文のみ出力:\n\n${cur}`;
+    document.getElementById('ai_out').textContent='EN: '+await callClaude(p);
+  }catch(e){aiErr();}finally{busy('t_trans',false);}
+}
+
+/* ===== render sheet ===== */
+function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function nl2br(s){return esc(s).replace(/\n/g,'<br>');}
+function fullAddr(){
+  const g=id=>esc(document.getElementById(id).value);
+  return [g('addr1'),g('addr2'),g('addr3'),g('addr4')].filter(Boolean).join(' ');
+}
+function render(){
+  const g=id=>document.getElementById(id).value;
+  const today=new Date();
+  const dateStr=today.getFullYear()?`${wareki(today.getFullYear(),today.getMonth()+1)}年${today.getMonth()+1}月${today.getDate()}日 現在`:'';
+  const bw=wareki(g('bYear'),g('bMonth'));const age=calcAge(g('bYear'),g('bMonth'),g('bDay'));
+  const birth=g('bYear')?`${bw}年 ${g('bMonth')||'?'}月 ${g('bDay')||'?'}日生（満 ${age!==''?age:'?'} 歳）`:'';
+
+  const eduRows=hist.filter(r=>r.type==='edu'), workRows=hist.filter(r=>r.type==='work');
+  let h='<tr><td class="sub" colspan="3">学歴</td></tr>';
+  if(!eduRows.length)h+='<tr><td class="yr"></td><td class="mo"></td><td class="ev empty-h">—</td></tr>';
+  else eduRows.forEach(r=>{h+=`<tr><td class="yr">${r.year?wareki(r.year,r.month):''}</td><td class="mo">${r.month||''}</td><td class="ev">${esc(r.name)}${r.detail?' '+esc(r.detail):''} ${r.status==='free'?esc(r.statusFree||''):tr(r.status)}</td></tr>`;});
+  h+='<tr><td class="sub" colspan="3">職歴</td></tr>';
+  if(!workRows.length)h+=`<tr><td class="yr"></td><td class="mo"></td><td class="ev" style="text-align:center">${tr('none')}</td></tr>`;
+  else workRows.forEach(r=>{h+=`<tr><td class="yr">${r.year?wareki(r.year,r.month):''}</td><td class="mo">${r.month||''}</td><td class="ev">${esc(r.name)}${r.detail?' '+esc(r.detail):''} ${r.status==='free'?esc(r.statusFree||''):tr(r.status)}</td></tr>`;});
+  h+=`<tr><td colspan="3" class="end">${tr('end')}</td></tr>`;
+
+  let lh='';
+  if(!lic.length)lh=`<tr><td class="yr"></td><td class="mo"></td><td class="ev" style="text-align:center">${tr('none')}</td></tr>`;
+  else lic.forEach(r=>{lh+=`<tr><td class="yr">${r.year?wareki(r.year,r.month):''}</td><td class="mo">${r.month||''}</td><td class="ev">${esc(r.name)}</td></tr>`;});
+
+  const hasOC=g('ocName')||g('ocAddr')||g('ocPhone');
+  const visaExp=g('visaExp')?(()=>{const d=new Date(g('visaExp'));return `${wareki(d.getFullYear(),d.getMonth()+1)}年${d.getMonth()+1}月${d.getDate()}日`;})():'';
+  const foreign=[
+    (g('residence')==='abroad')&&['現在の居住地','海外'+(g('residenceCountry')?`（${esc(g('residenceCountry'))}）`:'')],
+    g('nationality')&&['国籍',esc(g('nationality'))],
+    g('visa')&&['在留資格',esc(g('visa'))],
+    visaExp&&['在留期限',visaExp],
+    g('jpLevel')&&['日本語会話',esc(g('jpLevel'))],
+    g('stayYears')&&['滞日歴',esc(g('stayYears'))],
+    g('workHours')&&['週の就労可能時間',esc(g('workHours'))],
+    g('returnPlan')&&['帰国予定',esc(g('returnPlan'))],
+  ].filter(Boolean);
+
+  const sheet=`
+  <div class="spread">
+    <div class="page">
+      <div class="doc-title"><span class="date">${dateStr}</span><b>履　歴　書</b><span class="date"></span></div>
+      <table class="dtable">
+        <tr><td class="lbl-cell">ふりがな</td><td><span class="furi">${esc(g('furigana'))}&nbsp;</span></td><td class="photo-cell" rowspan="4"><div class="ph">${photoData?'<img src="'+photoData+'">':'写真'}</div></td></tr>
+        <tr><td class="lbl-cell">氏　名</td><td><span class="name-big">${esc(g('name'))||'&nbsp;'}</span></td></tr>
+        <tr><td class="lbl-cell">生年月日</td><td>${birth||'&nbsp;'}</td></tr>
+        <tr><td class="lbl-cell">性別</td><td>${esc(g('gender'))||'&nbsp;'}</td></tr>
+      </table>
+      <table class="dtable">
+        <tr><td class="lbl-cell">現住所<br><span class="furi">${esc(g('zip'))}</span></td><td colspan="3">${fullAddr()||'&nbsp;'}${g('addrRoma')?'<br><span class="furi">'+esc(g('addrRoma'))+'</span>':''}</td></tr>
+        <tr><td class="lbl-cell">電話</td><td>${esc(g('phone'))||'&nbsp;'}</td><td class="lbl-cell">E-mail</td><td>${esc(g('email'))||'&nbsp;'}</td></tr>
+        ${hasOC?`<tr><td class="lbl-cell">連絡先<br><span class="furi">${esc(g('ocRel'))}</span></td><td colspan="3">${esc(g('ocName'))} ${esc(g('ocAddr'))} ${g('ocPhone')?'TEL '+esc(g('ocPhone')):''} ${esc(g('ocEmail'))}</td></tr>`:''}
+      </table>
+      <table class="dtable hist grow"><tr><th class="yr">年</th><th class="mo">月</th><th>学　歴　・　職　歴</th></tr>${h}</table>
+    </div>
+    <div class="page">
+      <table class="dtable hist"><tr><th class="yr">年</th><th class="mo">月</th><th>免　許　・　資　格</th></tr>${lh}</table>
+      ${foreign.length?`<table class="dtable foreign-box"><tr><td class="sec-h" colspan="4">在留資格・語学等</td></tr>${chunk(foreign).map(pair=>`<tr>${pair.map(f=>`<td class="lbl-cell">${f[0]}</td><td>${f[1]}</td>`).join('')}${pair.length===1?'<td></td><td></td>':''}</tr>`).join('')}</table>`:''}
+      <table class="dtable"><tr><td class="sec-h">志望の動機</td></tr><tr><td class="freebox">${nl2br(g('motivation'))||'&nbsp;'}</td></tr>
+        <tr><td class="sec-h">自己PR・趣味・特技</td></tr><tr><td class="freebox">${nl2br(g('selfpr'))||'&nbsp;'}</td></tr></table>
+      <table class="dtable mini-grid">
+        <tr><td class="lbl-cell">通勤時間</td><td>${esc(g('commute'))||'&nbsp;'}</td><td class="lbl-cell">扶養家族<br>(配偶者を除く)</td><td>${g('dependents')!==''?esc(g('dependents'))+' 人':'&nbsp;'}</td></tr>
+        <tr><td class="lbl-cell">配偶者</td><td>${esc(g('spouse'))||'&nbsp;'}</td><td class="lbl-cell">配偶者の扶養義務</td><td>${esc(g('spouseSupport'))||'&nbsp;'}</td></tr>
+      </table>
+      <table class="dtable grow"><tr><td class="sec-h">本人希望記入欄</td></tr><tr><td class="freebox" style="min-height:90px">${nl2br(g('wishes'))||'&nbsp;'}</td></tr></table>
+    </div>
+  </div>`;
+  document.getElementById('sheet').innerHTML=sheet;
+  scheduleSave();
+}
+function chunk(a){const o=[];for(let i=0;i<a.length;i+=2)o.push(a.slice(i,i+2));return o;}
+
+/* ===== PDF 保存 (確実にダウンロード) ===== */
+async function savePDF(size){
+  const btnId=size==='a3'?'saveBtnA3':'saveBtn';
+  const btn=document.getElementById(btnId);const orig=btn.innerHTML;
+  btn.disabled=true;btn.innerHTML='<span class="spin"></span>'+(lang==='ja'?'PDF作成中...':'Creating PDF...');
+  try{
+    if(!window.jspdf||!window.html2canvas)throw new Error('lib');
+    await (document.fonts&&document.fonts.ready);
+    const {jsPDF}=window.jspdf;
+    const pages=[...document.querySelectorAll('#sheet .page')];
+    const holder=document.createElement('div');
+    holder.style.cssText='position:fixed;left:-99999px;top:0;background:#fff;';
+    document.body.appendChild(holder);
+    const imgs=[];
+    for(const pg of pages){
+      const clone=pg.cloneNode(true);
+      clone.style.width='720px';clone.style.maxWidth='720px';clone.style.flex='none';
+      holder.appendChild(clone);
+      const canvas=await html2canvas(clone,{scale:2,backgroundColor:'#ffffff'});
+      holder.removeChild(clone);
+      imgs.push({data:canvas.toDataURL('image/jpeg',0.92),w:canvas.width,h:canvas.height});
+    }
+    document.body.removeChild(holder);
+
+    if(size==='a3'){
+      // A3横の見開き1枚。左右に配置 → 半分に折るとA4の履歴書になる
+      const pdf=new jsPDF('l','mm','a3'); // 420 x 297
+      const halfW=210,fullH=297,m=8,aw=halfW-m*2,ah=fullH-m*2;
+      imgs.forEach((im,i)=>{
+        let w=aw,h=im.h*aw/im.w;if(h>ah){h=ah;w=im.w*ah/im.h;}
+        const xBase=i===0?0:halfW;
+        pdf.addImage(im.data,'JPEG',xBase+(halfW-w)/2,m,w,h);
+      });
+      pdf.save('rirekisho-A3.pdf');
+    }else{
+      // A4縦を2枚
+      const pdf=new jsPDF('p','mm','a4');
+      const pw=210,ph=297,m=8,aw=pw-m*2,ah=ph-m*2;
+      imgs.forEach((im,i)=>{
+        let w=aw,h=im.h*aw/im.w;if(h>ah){h=ah;w=im.w*ah/im.h;}
+        if(i>0)pdf.addPage();
+        pdf.addImage(im.data,'JPEG',(pw-w)/2,m,w,h);
+      });
+      pdf.save('rirekisho.pdf');
+    }
+  }catch(e){
+    alert(lang==='ja'?'PDF作成に問題が起きました。ブラウザの印刷ダイアログを開きます。':'PDF creation failed. Opening the print dialog.');
+    window.print();
+  }finally{btn.disabled=false;btn.innerHTML=orig;}
+}
+
+/* ===== 自動保存 (window.storage) ===== */
+const FIELD_IDS=['name','furigana','bYear','bMonth','bDay','gender','zip','addr1','addr2','addr3','addr4','addrRoma','phone','email','ocRel','ocName','ocAddr','ocPhone','ocEmail','residence','residenceCountry','nationality','visa','visaExp','jpLevel','stayYears','workHours','returnPlan','commute','spouse','dependents','spouseSupport','motivation','selfpr','wishes','m_company','m_keywords','p_keywords'];
+let saveTimer=null;
+function setSaved(t){const s=document.getElementById('saveStat');if(s)s.textContent=t||(lang==='ja'?'✓ 保存済み':'✓ Saved');}
+function collectState(){const o={fields:{},hist,lic,lang};FIELD_IDS.forEach(id=>{const el=document.getElementById(id);if(el)o.fields[id]=el.value;});return o;}
+function scheduleSave(){
+  if(!window.storage)return;
+  clearTimeout(saveTimer);
+  saveTimer=setTimeout(async()=>{
+    try{
+      await window.storage.set('rirekisho_main',JSON.stringify(collectState()),false);
+      if(photoData){try{await window.storage.set('rirekisho_photo',photoData,false);}catch(e){}}
+      setSaved();
+    }catch(e){}
+  },700);
+}
+async function loadState(){
+  if(!window.storage)return false;
+  try{
+    const r=await window.storage.get('rirekisho_main');
+    if(!r||!r.value)return false;
+    const o=JSON.parse(r.value);
+    if(o.fields)Object.entries(o.fields).forEach(([id,v])=>{const el=document.getElementById(id);if(el&&v!=null)el.value=v;});
+    if(Array.isArray(o.hist))hist=o.hist;
+    if(Array.isArray(o.lic))lic=o.lic;
+    try{const p=await window.storage.get('rirekisho_photo');if(p&&p.value){photoData=p.value;document.getElementById('photoPrev').innerHTML='<img src="'+photoData+'">';}}catch(e){}
+    setSaved(lang==='ja'?'✓ 復元しました':'✓ Restored');
+    if(o.lang&&o.lang!=='ja') setLang(o.lang);
+    return true;
+  }catch(e){return false;}
+}
+async function resetAll(){
+  if(!confirm(lang==='ja'?'入力内容をすべて消去します。よろしいですか?':'Clear all entered data?'))return;
+  try{if(window.storage){await window.storage.delete('rirekisho_main');try{await window.storage.delete('rirekisho_photo');}catch(e){}}}catch(e){}
+  location.reload();
+}
+
+/* ===== 初期化 ===== */
+(async()=>{
+  const restored=await loadState();
+  if(!restored){addHist();addLic();}
+  renderHistRows();renderLicRows();render();
+})();
+</script>
+</body>
+</html>
