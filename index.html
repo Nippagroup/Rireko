@@ -52,6 +52,17 @@
     font-size:12px;cursor:pointer;padding:6px 8px;border-radius:7px;transition:.15s;}
   .mini-link:hover{background:rgba(31,45,80,.07);color:var(--indigo);}
   .save-stat{font-size:11px;color:var(--ai);font-weight:700;min-width:54px;}
+  .auth-area{font-size:12px;font-weight:700;color:var(--indigo);display:flex;align-items:center;gap:8px;}
+  .auth-area .em{color:var(--muted);font-weight:500;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .modal-bg{position:fixed;inset:0;background:rgba(28,27,24,.45);display:none;align-items:center;justify-content:center;z-index:200;padding:18px;}
+  .modal-bg.show{display:flex;}
+  .modal{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);
+    max-width:380px;width:100%;padding:22px;}
+  .modal h3{font-family:var(--mincho);color:var(--indigo);margin:0 0 6px;font-size:18px;}
+  .modal p{font-size:12.5px;color:var(--muted);line-height:1.6;margin:0 0 14px;}
+  .modal input{margin-bottom:10px;}
+  .modal .x{float:right;border:none;background:transparent;font-size:20px;cursor:pointer;color:var(--muted);line-height:1;}
+  .modal-msg{font-size:12px;color:var(--ai);font-weight:700;margin-top:10px;min-height:18px;}
   .btn-print.ghost-print{background:transparent;color:var(--indigo);box-shadow:none;border:1px solid var(--indigo);}
   .btn-print.ghost-print:hover{background:rgba(31,45,80,.07);}
 
@@ -178,6 +189,7 @@
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
@@ -202,12 +214,24 @@
       <option value="ko">한국어</option>
       <option value="pt">Português</option>
     </select>
+    <span id="authArea" class="auth-area"></span>
     <span id="saveStat" class="save-stat"></span>
     <button class="mini-link" onclick="resetAll()" data-ja="リセット" data-en="Reset">リセット</button>
     <button class="btn-print ghost-print" id="saveBtnA3" onclick="savePDF('a3')"><span data-ja="A3見開き(コンビニ用)" data-en="A3 spread (konbini)">A3見開き(コンビニ用)</span></button>
     <button class="btn-print" id="saveBtn" onclick="savePDF('a4x2')"><span>⬇</span><span data-ja="PDFを保存(A4×2枚)" data-en="Save PDF (2×A4)">PDFを保存(A4×2枚)</span></button>
   </div>
 </header>
+
+<div class="modal-bg" id="loginModal">
+  <div class="modal">
+    <button class="x" onclick="closeLogin()">×</button>
+    <h3 data-ja="ログイン / 新規登録" data-en="Log in / Sign up">ログイン / 新規登録</h3>
+    <p data-ja="メールアドレスを入れて送信すると、ログイン用のリンクが届きます。パスワードは不要です。AI機能の利用にはログインが必要です。" data-en="Enter your email and we'll send a login link. No password needed. Login is required to use the AI features.">メールアドレスを入れて送信すると、ログイン用のリンクが届きます。パスワードは不要です。AI機能の利用にはログインが必要です。</p>
+    <input id="loginEmail" type="email" placeholder="you@example.com">
+    <button class="ai-btn" style="width:100%;justify-content:center" id="loginSend" onclick="sendMagicLink()"><span data-ja="ログインリンクを送る" data-en="Send login link">ログインリンクを送る</span></button>
+    <div class="modal-msg" id="loginMsg"></div>
+  </div>
+</div>
 
 <div class="wrap">
   <div class="form-col">
@@ -480,6 +504,45 @@
 <script>
 let lang='ja', hist=[], lic=[], photoData=null;
 
+/* ===== ログイン (Supabase) ===== */
+const SUPABASE_URL='https://nxjoivdvanxxecphukew.supabase.co';
+const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im54am9pdmR2YW54eGVjcGh1a2V3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAyMjU1MDIsImV4cCI6MjA5NTgwMTUwMn0.Q6yXAg204rRr4mdxIo7Ux_sv_4vf2L2L9uMDVDn6xVA';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+let currentUser=null;
+
+function openLogin(){document.getElementById('loginModal').classList.add('show');}
+function closeLogin(){document.getElementById('loginModal').classList.remove('show');}
+async function sendMagicLink(){
+  const email=document.getElementById('loginEmail').value.trim();
+  const msg=document.getElementById('loginMsg');
+  if(!email){msg.textContent=lang==='ja'?'メールアドレスを入れてください':'Please enter your email';return;}
+  const btn=document.getElementById('loginSend');btn.disabled=true;
+  msg.textContent=lang==='ja'?'送信中...':'Sending...';
+  try{
+    const {error}=await sb.auth.signInWithOtp({email,options:{emailRedirectTo:window.location.origin}});
+    if(error)throw error;
+    msg.textContent=lang==='ja'?'✓ メールを確認してください。届いたリンクを開くとログインできます。':'✓ Check your email and open the link to log in.';
+  }catch(e){msg.textContent=lang==='ja'?'送信に失敗しました。メールアドレスをご確認ください。':'Failed to send. Please check the email address.';}
+  finally{btn.disabled=false;}
+}
+async function logout(){await sb.auth.signOut();}
+function updateAuthUI(user){
+  currentUser=user||null;
+  const a=document.getElementById('authArea');if(!a)return;
+  if(currentUser){
+    a.innerHTML='<span class="em" title="'+(currentUser.email||'')+'">'+(currentUser.email||'')+'</span><button class="mini-link" onclick="logout()">'+(lang==='ja'?'ログアウト':'Log out')+'</button>';
+  }else{
+    a.innerHTML='<button class="mini-link" onclick="openLogin()">'+(lang==='ja'?'ログイン':'Log in')+'</button>';
+  }
+}
+async function initAuth(){
+  try{
+    const {data}=await sb.auth.getSession();
+    updateAuthUI(data.session?data.session.user:null);
+    sb.auth.onAuthStateChange((_e,session)=>{updateAuthUI(session?session.user:null);if(session)closeLogin();});
+  }catch(e){updateAuthUI(null);}
+}
+
 const T={
   enrolled:{ja:'入学',en:'入学'},graduated:{ja:'卒業',en:'卒業'},dropout:{ja:'中退',en:'中退'},
   enrolling:{ja:'在学中',en:'在学中'},joined:{ja:'入社',en:'入社'},resigned:{ja:'退職',en:'退職'},
@@ -603,22 +666,34 @@ function loadPhoto(e){const f=e.target.files[0];if(!f)return;const rd=new FileRe
 
 /* ===== AI (Claude in Claude) ===== */
 async function callClaude(prompt){
-  // APIキーはブラウザに置かない。自社サーバー(/api/generate)経由で安全に呼ぶ。
+  // ログイン中ユーザーのトークンを付けて、自社サーバー経由で安全に呼ぶ
+  const {data}=await sb.auth.getSession();
+  const token=data.session?data.session.access_token:null;
+  if(!token){openLogin();throw new Error('login_required');}
   const res=await fetch("/api/generate",{
-    method:"POST",headers:{"Content-Type":"application/json"},
+    method:"POST",
+    headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},
     body:JSON.stringify({prompt})
   });
+  if(res.status===401){openLogin();throw new Error('login_required');}
+  if(res.status===403){throw new Error('limit_reached');}
   if(!res.ok)throw new Error('http '+res.status);
-  const data=await res.json();
-  return (data.text||'').trim();
+  const data2=await res.json();
+  return (data2.text||'').trim();
 }
 function busy(id,on,label){
   const b=document.getElementById(id);b.disabled=on;
   b.dataset.lbl=b.dataset.lbl||b.innerHTML;
   b.innerHTML=on?`<span class="spin"></span>${lang==='ja'?'生成中...':'Working...'}`:b.dataset.lbl;
 }
-function aiErr(){const m=lang==='ja'?'AIの呼び出しに失敗しました。claude.ai上で開いているか、通信状況をご確認ください。':'AI call failed. Make sure this is opened on claude.ai and you are online.';
-  document.getElementById('ai_out').textContent=m;}
+function aiErr(e){
+  let m;
+  const code=e&&e.message;
+  if(code==='login_required') m=lang==='ja'?'AI機能を使うにはログイン(無料)が必要です。':'Please log in (free) to use AI features.';
+  else if(code==='limit_reached') m=lang==='ja'?'今月の無料AI(5回)を使い切りました。来月リセットされます。':'You have used your 5 free AI generations this month. It resets next month.';
+  else m=lang==='ja'?'AIの呼び出しに失敗しました。通信状況をご確認ください。':'AI call failed. Please check your connection.';
+  document.getElementById('ai_out').textContent=m;
+}
 
 async function genMotivation(){
   const kw=document.getElementById('m_keywords').value.trim();
@@ -632,7 +707,7 @@ async function genMotivation(){
 本人が伝えたい内容(言語は問わない): ${kw}
 出力は志望動機の本文のみ。前置き・説明・引用符は不要。`;
     document.getElementById('motivation').value=await callClaude(p);render();
-  }catch(e){aiErr();}finally{busy('m_gen',false);}
+  }catch(e){aiErr(e);}finally{busy('m_gen',false);}
 }
 async function genSelfPR(){
   const kw=document.getElementById('p_keywords').value.trim();
@@ -644,7 +719,7 @@ async function genSelfPR(){
 本人の情報(言語は問わない): ${kw}
 出力は自己PRの本文のみ。前置き・説明・引用符は不要。`;
     document.getElementById('selfpr').value=await callClaude(p);render();
-  }catch(e){aiErr();}finally{busy('p_gen',false);}
+  }catch(e){aiErr(e);}finally{busy('p_gen',false);}
 }
 function fillDefaultWish(){
   document.getElementById('wishes').value=lang==='ja'?'貴社の規定に従います。':'貴社の規定に従います。';render();
@@ -658,7 +733,7 @@ async function polishJP(){
     const p=`次の文章を、日本の履歴書にふさわしい自然で丁寧なビジネス日本語(です・ます調)に書き直してください。意味は変えず、誇張しないこと。出力は本文のみ:\n\n${cur}`;
     document.getElementById(t).value=await callClaude(p);
     document.getElementById('ai_out').textContent=lang==='ja'?'✓ 自然な日本語に整えました。':'✓ Polished.';render();
-  }catch(e){aiErr();}finally{busy('t_polish',false);}
+  }catch(e){aiErr(e);}finally{busy('t_polish',false);}
 }
 async function translateOut(){
   const t=document.getElementById('tool_target').value;
@@ -668,7 +743,7 @@ async function translateOut(){
   try{
     const p=`次の日本語を自然な英語に翻訳してください。翻訳文のみ出力:\n\n${cur}`;
     document.getElementById('ai_out').textContent='EN: '+await callClaude(p);
-  }catch(e){aiErr();}finally{busy('t_trans',false);}
+  }catch(e){aiErr(e);}finally{busy('t_trans',false);}
 }
 
 /* ===== render sheet ===== */
@@ -802,42 +877,42 @@ let saveTimer=null;
 function setSaved(t){const s=document.getElementById('saveStat');if(s)s.textContent=t||(lang==='ja'?'✓ 保存済み':'✓ Saved');}
 function collectState(){const o={fields:{},hist,lic,lang};FIELD_IDS.forEach(id=>{const el=document.getElementById(id);if(el)o.fields[id]=el.value;});return o;}
 function scheduleSave(){
-  if(!window.storage)return;
   clearTimeout(saveTimer);
-  saveTimer=setTimeout(async()=>{
+  saveTimer=setTimeout(()=>{
     try{
-      await window.storage.set('rirekisho_main',JSON.stringify(collectState()),false);
-      if(photoData){try{await window.storage.set('rirekisho_photo',photoData,false);}catch(e){}}
+      const o=collectState(); if(photoData)o.photo=photoData;
+      localStorage.setItem('rireko_state', JSON.stringify(o));
       setSaved();
     }catch(e){}
   },700);
 }
-async function loadState(){
-  if(!window.storage)return false;
+function applyState(o){
+  if(o.fields)Object.entries(o.fields).forEach(([id,v])=>{const el=document.getElementById(id);if(el&&v!=null)el.value=v;});
+  if(Array.isArray(o.hist))hist=o.hist;
+  if(Array.isArray(o.lic))lic=o.lic;
+  if(o.photo){photoData=o.photo;const pp=document.getElementById('photoPrev');if(pp)pp.innerHTML='<img src="'+photoData+'">';}
+  if(o.lang&&o.lang!=='ja') setLang(o.lang);
+}
+function loadLocal(){
   try{
-    const r=await window.storage.get('rirekisho_main');
-    if(!r||!r.value)return false;
-    const o=JSON.parse(r.value);
-    if(o.fields)Object.entries(o.fields).forEach(([id,v])=>{const el=document.getElementById(id);if(el&&v!=null)el.value=v;});
-    if(Array.isArray(o.hist))hist=o.hist;
-    if(Array.isArray(o.lic))lic=o.lic;
-    try{const p=await window.storage.get('rirekisho_photo');if(p&&p.value){photoData=p.value;document.getElementById('photoPrev').innerHTML='<img src="'+photoData+'">';}}catch(e){}
+    const s=localStorage.getItem('rireko_state'); if(!s)return false;
+    applyState(JSON.parse(s));
     setSaved(lang==='ja'?'✓ 復元しました':'✓ Restored');
-    if(o.lang&&o.lang!=='ja') setLang(o.lang);
     return true;
   }catch(e){return false;}
 }
-async function resetAll(){
+function resetAll(){
   if(!confirm(lang==='ja'?'入力内容をすべて消去します。よろしいですか?':'Clear all entered data?'))return;
-  try{if(window.storage){await window.storage.delete('rirekisho_main');try{await window.storage.delete('rirekisho_photo');}catch(e){}}}catch(e){}
+  try{localStorage.removeItem('rireko_state');}catch(e){}
   location.reload();
 }
 
 /* ===== 初期化 ===== */
-(async()=>{
-  const restored=await loadState();
+(function(){
+  const restored=loadLocal();
   if(!restored){addHist();addLic();}
   renderHistRows();renderLicRows();render();
+  initAuth();
 })();
 </script>
 </body>
