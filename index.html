@@ -147,10 +147,11 @@
   #sheet{color:var(--doc-line);font-family:var(--mincho);font-size:11px;line-height:1.5;}
   .spread{display:flex;gap:12px;justify-content:center;align-items:stretch;}
   .spread .page{background:#fff;border:1.5px solid var(--doc-line);flex:1 1 0;min-width:0;
-    display:flex;flex-direction:column;}
+    aspect-ratio:210/297;display:flex;flex-direction:column;}
   @media(max-width:820px){.spread{flex-direction:column;align-items:center;gap:16px;}
     .spread .page{width:100%;max-width:560px;flex:none;}}
-  .page .grow{flex:1;}
+  .page .grow{flex:1 1 auto;min-height:0;}
+  .page .grow td.freebox{height:100%;vertical-align:top;}
   #sheet .doc-title{display:flex;justify-content:space-between;align-items:flex-end;padding:9px 14px 6px;
     border-bottom:1.5px solid var(--doc-line);}
   #sheet .doc-title b{font-size:21px;font-weight:700;letter-spacing:.45em;}
@@ -835,7 +836,7 @@ function render(){
     <div class="page">
       <table class="dtable hist"><tr><th class="yr">年</th><th class="mo">月</th><th>免　許　・　資　格</th></tr>${lh}</table>
       ${foreign.length?`<table class="dtable foreign-box"><tr><td class="sec-h" colspan="4">在留資格・語学等</td></tr>${chunk(foreign).map(pair=>`<tr>${pair.map(f=>`<td class="lbl-cell">${f[0]}</td><td>${f[1]}</td>`).join('')}${pair.length===1?'<td></td><td></td>':''}</tr>`).join('')}</table>`:''}
-      <table class="dtable"><tr><td class="sec-h">志望の動機</td></tr><tr><td class="freebox">${nl2br(g('motivation'))||'&nbsp;'}</td></tr>
+      <table class="dtable grow"><tr><td class="sec-h">志望の動機</td></tr><tr><td class="freebox">${nl2br(g('motivation'))||'&nbsp;'}</td></tr>
         <tr><td class="sec-h">自己PR・趣味・特技</td></tr><tr><td class="freebox">${nl2br(g('selfpr'))||'&nbsp;'}</td></tr></table>
       <table class="dtable mini-grid">
         <tr><td class="lbl-cell">通勤時間</td><td>${esc(g('commute'))||'&nbsp;'}</td><td class="lbl-cell">扶養家族<br>(配偶者を除く)</td><td>${g('dependents')!==''?esc(g('dependents'))+' 人':'&nbsp;'}</td></tr>
