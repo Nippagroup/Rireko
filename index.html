@@ -188,8 +188,8 @@
     .spread .page{width:100%;max-width:none;page-break-after:always;}
     .spread .page:last-child{page-break-after:auto;}
     /* A3見開き: 2ページを横に並べて1枚 */
-    body.pa3 .spread{display:flex;gap:6px;justify-content:center;align-items:flex-start;}
-    body.pa3 .spread .page{flex:0 0 auto;height:281mm;width:auto;max-width:none;page-break-after:auto;}
+    body.pa3 .spread{display:flex;gap:5mm;justify-content:center;align-items:flex-start;margin:0;}
+    body.pa3 .spread .page{box-sizing:border-box;flex:0 0 auto;height:280mm;width:auto;max-width:none;page-break-after:auto;page-break-inside:avoid;overflow:hidden;}
   }
 </style>
 <style id="pageSize">@page{size:A4 portrait;margin:8mm;}</style>
@@ -860,7 +860,7 @@ function chunk(a){const o=[];for(let i=0;i<a.length;i+=2)o.push(a.slice(i,i+2));
 function savePDF(size){
   const a3=(size==='a3');
   document.getElementById('pageSize').textContent = a3
-    ? '@page{size:A3 landscape;margin:8mm;}'
+    ? '@page{size:A3 landscape;margin:5mm;}'
     : '@page{size:A4 portrait;margin:8mm;}';
   document.body.classList.toggle('pa3', a3);
   const cleanup=()=>{
