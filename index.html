@@ -176,18 +176,23 @@
   .foreign-box{background:#fbf7ee;}
 
   @media print{
-    @page{size:A4 portrait;margin:9mm;}
     header.app,.form-col,.preview-bar{display:none !important;}
     body{background:#fff;}
     .wrap{display:block;padding:0;max-width:none;} .preview-col{position:static;}
     .doc-scale{background:#fff;box-shadow:none;padding:0;max-height:none;overflow:visible;}
     #sheet{max-width:none;border:none;font-size:10.5px;}
-    .spread{display:block;}
-    .spread .page{max-width:none;width:100%;border-color:#000;page-break-after:always;}
-    .spread .page:last-child{page-break-after:auto;}
+    .spread .page{border-color:#000;}
     .dtable td,.dtable th{border-color:#000;}
+    /* 既定(A4): 2ページを縦に、各ページ1枚 */
+    .spread{display:block;}
+    .spread .page{width:100%;max-width:none;page-break-after:always;}
+    .spread .page:last-child{page-break-after:auto;}
+    /* A3見開き: 2ページを横に並べて1枚 */
+    body.pa3 .spread{display:flex;gap:6px;justify-content:center;align-items:flex-start;}
+    body.pa3 .spread .page{flex:0 0 auto;height:281mm;width:auto;max-width:none;page-break-after:auto;}
   }
 </style>
+<style id="pageSize">@page{size:A4 portrait;margin:8mm;}</style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -851,54 +856,20 @@ function render(){
 function chunk(a){const o=[];for(let i=0;i<a.length;i+=2)o.push(a.slice(i,i+2));return o;}
 
 /* ===== PDF 保存 (確実にダウンロード) ===== */
-async function savePDF(size){
-  const btnId=size==='a3'?'saveBtnA3':'saveBtn';
-  const btn=document.getElementById(btnId);const orig=btn.innerHTML;
-  btn.disabled=true;btn.innerHTML='<span class="spin"></span>'+(lang==='ja'?'PDF作成中...':'Creating PDF...');
-  try{
-    if(!window.jspdf||!window.html2canvas)throw new Error('lib');
-    await (document.fonts&&document.fonts.ready);
-    const {jsPDF}=window.jspdf;
-    const pages=[...document.querySelectorAll('#sheet .page')];
-    const holder=document.createElement('div');
-    holder.style.cssText='position:fixed;left:-99999px;top:0;background:#fff;';
-    document.body.appendChild(holder);
-    const imgs=[];
-    for(const pg of pages){
-      const clone=pg.cloneNode(true);
-      clone.style.width='720px';clone.style.maxWidth='720px';clone.style.flex='none';
-      holder.appendChild(clone);
-      const canvas=await html2canvas(clone,{scale:2,backgroundColor:'#ffffff'});
-      holder.removeChild(clone);
-      imgs.push({data:canvas.toDataURL('image/jpeg',0.92),w:canvas.width,h:canvas.height});
-    }
-    document.body.removeChild(holder);
-
-    if(size==='a3'){
-      // A3横の見開き1枚。左右に配置 → 半分に折るとA4の履歴書になる
-      const pdf=new jsPDF('l','mm','a3'); // 420 x 297
-      const halfW=210,fullH=297,m=8,aw=halfW-m*2,ah=fullH-m*2;
-      imgs.forEach((im,i)=>{
-        let w=aw,h=im.h*aw/im.w;if(h>ah){h=ah;w=im.w*ah/im.h;}
-        const xBase=i===0?0:halfW;
-        pdf.addImage(im.data,'JPEG',xBase+(halfW-w)/2,m,w,h);
-      });
-      pdf.save('rirekisho-A3.pdf');
-    }else{
-      // A4縦を2枚
-      const pdf=new jsPDF('p','mm','a4');
-      const pw=210,ph=297,m=8,aw=pw-m*2,ah=ph-m*2;
-      imgs.forEach((im,i)=>{
-        let w=aw,h=im.h*aw/im.w;if(h>ah){h=ah;w=im.w*ah/im.h;}
-        if(i>0)pdf.addPage();
-        pdf.addImage(im.data,'JPEG',(pw-w)/2,m,w,h);
-      });
-      pdf.save('rirekisho.pdf');
-    }
-  }catch(e){
-    alert(lang==='ja'?'PDF作成に問題が起きました。ブラウザの印刷ダイアログを開きます。':'PDF creation failed. Opening the print dialog.');
-    window.print();
-  }finally{btn.disabled=false;btn.innerHTML=orig;}
+/* ===== PDF出力：ブラウザの印刷機能で、プレビュー通りにページ全体へ配置 ===== */
+function savePDF(size){
+  const a3=(size==='a3');
+  document.getElementById('pageSize').textContent = a3
+    ? '@page{size:A3 landscape;margin:8mm;}'
+    : '@page{size:A4 portrait;margin:8mm;}';
+  document.body.classList.toggle('pa3', a3);
+  const cleanup=()=>{
+    document.body.classList.remove('pa3');
+    document.getElementById('pageSize').textContent='@page{size:A4 portrait;margin:8mm;}';
+    window.removeEventListener('afterprint',cleanup);
+  };
+  window.addEventListener('afterprint',cleanup);
+  setTimeout(()=>window.print(),80);
 }
 
 /* ===== 自動保存 (window.storage) ===== */
