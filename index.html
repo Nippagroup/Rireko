@@ -860,7 +860,7 @@ function chunk(a){const o=[];for(let i=0;i<a.length;i+=2)o.push(a.slice(i,i+2));
 function savePDF(size){
   const a3=(size==='a3');
   document.getElementById('pageSize').textContent = a3
-    ? '@page{size:A3 landscape;margin:5mm;}'
+    ? '@page{size:420mm 297mm;margin:5mm;}'
     : '@page{size:A4 portrait;margin:8mm;}';
   document.body.classList.toggle('pa3', a3);
   const cleanup=()=>{
