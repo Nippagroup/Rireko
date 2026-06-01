@@ -535,11 +535,40 @@ function updateAuthUI(user){
     a.innerHTML='<button class="mini-link" onclick="openLogin()">'+(lang==='ja'?'ログイン':'Log in')+'</button>';
   }
 }
+let cloudSynced=false;
+async function saveCloud(){
+  if(!currentUser)return;
+  try{
+    await sb.from('resumes').upsert(
+      {user_id:currentUser.id, data:collectState(), updated_at:new Date().toISOString()},
+      {onConflict:'user_id'}
+    );
+  }catch(e){}
+}
+async function loadCloud(){
+  if(!currentUser)return false;
+  try{
+    const {data,error}=await sb.from('resumes').select('data').eq('user_id',currentUser.id).maybeSingle();
+    if(error||!data||!data.data||!Object.keys(data.data).length)return false;
+    applyState(data.data);
+    renderHistRows();renderLicRows();render();
+    setSaved(lang==='ja'?'✓ アカウントから復元':'✓ Loaded from account');
+    return true;
+  }catch(e){return false;}
+}
+async function handleSession(session){
+  const u=session?session.user:null;
+  updateAuthUI(u);
+  if(u){
+    closeLogin();
+    if(!cloudSynced){cloudSynced=true;const got=await loadCloud();if(!got)await saveCloud();}
+  }else{cloudSynced=false;}
+}
 async function initAuth(){
   try{
     const {data}=await sb.auth.getSession();
-    updateAuthUI(data.session?data.session.user:null);
-    sb.auth.onAuthStateChange((_e,session)=>{updateAuthUI(session?session.user:null);if(session)closeLogin();});
+    handleSession(data.session);
+    sb.auth.onAuthStateChange((_e,session)=>handleSession(session));
   }catch(e){updateAuthUI(null);}
 }
 
@@ -884,6 +913,7 @@ function scheduleSave(){
       localStorage.setItem('rireko_state', JSON.stringify(o));
       setSaved();
     }catch(e){}
+    if(typeof currentUser!=='undefined' && currentUser) saveCloud();
   },700);
 }
 function applyState(o){
