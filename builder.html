@@ -858,18 +858,49 @@ function chunk(a){const o=[];for(let i=0;i<a.length;i+=2)o.push(a.slice(i,i+2));
 /* ===== PDF 保存 (確実にダウンロード) ===== */
 /* ===== PDF出力：ブラウザの印刷機能で、プレビュー通りにページ全体へ配置 ===== */
 function savePDF(size){
-  const a3=(size==='a3');
-  document.getElementById('pageSize').textContent = a3
-    ? '@page{size:420mm 297mm;margin:5mm;}'
-    : '@page{size:A4 portrait;margin:8mm;}';
-  document.body.classList.toggle('pa3', a3);
-  const cleanup=()=>{
-    document.body.classList.remove('pa3');
-    document.getElementById('pageSize').textContent='@page{size:A4 portrait;margin:8mm;}';
-    window.removeEventListener('afterprint',cleanup);
-  };
-  window.addEventListener('afterprint',cleanup);
+  if(size==='a3'){ return savePDFa3(); }
+  // A4×2：ブラウザ印刷でA4縦2枚（プレビュー通りに全面配置）
+  document.getElementById('pageSize').textContent='@page{size:A4 portrait;margin:8mm;}';
+  document.body.classList.remove('pa3');
   setTimeout(()=>window.print(),80);
+}
+
+/* A3見開き：コードで必ず1枚のA3横ページに左右を配置する（印刷向きに依存しない） */
+async function savePDFa3(){
+  const btn=document.getElementById('saveBtnA3');const orig=btn?btn.innerHTML:'';
+  if(btn){btn.disabled=true;btn.innerHTML=(lang==='ja'?'作成中...':'Creating...');}
+  try{
+    if(!window.jspdf||!window.html2canvas)throw new Error('lib');
+    if(document.fonts&&document.fonts.ready)await document.fonts.ready;
+    const {jsPDF}=window.jspdf;
+    const pages=[...document.querySelectorAll('#sheet .page')];
+    const holder=document.createElement('div');
+    holder.style.cssText='position:fixed;left:-99999px;top:0;background:#fff;';
+    document.body.appendChild(holder);
+    const imgs=[];
+    for(const pg of pages){
+      const clone=pg.cloneNode(true);
+      clone.style.width='720px';clone.style.maxWidth='720px';
+      clone.style.height='1018px';   // A4比率の固定高さ。flexで中身を縦いっぱいに伸ばす
+      clone.style.aspectRatio='auto';
+      clone.style.flex='none';
+      holder.appendChild(clone);
+      const canvas=await html2canvas(clone,{scale:2,backgroundColor:'#ffffff',width:720,height:1018,windowWidth:720});
+      holder.removeChild(clone);
+      imgs.push({data:canvas.toDataURL('image/jpeg',0.95),w:canvas.width,h:canvas.height});
+    }
+    document.body.removeChild(holder);
+    const pdf=new jsPDF('l','mm','a3'); // 420 x 297（横向き）
+    const halfW=210,fullH=297,m=8,aw=halfW-2*m,ah=fullH-2*m;
+    imgs.forEach((im,i)=>{
+      let w=aw,h=im.h*aw/im.w; if(h>ah){h=ah;w=im.w*ah/im.h;}
+      const xBase=(i===0?0:halfW);
+      pdf.addImage(im.data,'JPEG',xBase+(halfW-w)/2,m+(ah-h)/2,w,h);
+    });
+    pdf.save('rirekisho-A3.pdf');
+  }catch(e){
+    alert(lang==='ja'?'A3 PDFの作成に失敗しました。もう一度お試しください。':'Failed to create the A3 PDF. Please try again.');
+  }finally{ if(btn){btn.disabled=false;btn.innerHTML=orig;} }
 }
 
 /* ===== 自動保存 (window.storage) ===== */
