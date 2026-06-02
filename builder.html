@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>履歴書ビルダー v2 | Rirekisho Builder</title>
+<title>rireko — 履歴書ビルダー</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;600;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;600;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Zen+Maru+Gothic:wght@700&display=swap" rel="stylesheet">
 <style>
   :root{
     --paper:#f4f1e8; --ink:#1c1b18; --indigo:#1f2d50; --indigo-soft:#3a4a72;
@@ -36,6 +36,12 @@
     box-shadow:inset 0 0 0 2px rgba(255,255,255,.25);transform:rotate(-3deg);}
   .brand h1{font-family:var(--mincho);font-size:clamp(17px,2.4vw,22px);margin:0;font-weight:700;color:var(--indigo);}
   .brand p{margin:1px 0 0;font-size:11px;color:var(--muted);letter-spacing:.03em;}
+  .brand-mascot{width:46px;height:46px;flex:none;object-fit:contain;}
+  .wordmark{font-family:'Zen Maru Gothic',sans-serif;font-weight:700;color:var(--indigo);font-size:23px;letter-spacing:.3px;line-height:1;display:inline-block;}
+  .wordmark .ia{position:relative;display:inline-block;}
+  .wordmark .ia .st{position:absolute;left:50%;top:-.34em;width:2px;height:.20em;background:var(--indigo);transform:translateX(-50%);border-radius:1px;}
+  .wordmark .ia .bd{position:absolute;left:50%;top:-.56em;width:.24em;height:.24em;background:var(--vermilion);border-radius:50%;transform:translateX(-50%);}
+  .modal-mascot{width:88px;height:88px;object-fit:contain;display:block;margin:2px auto 6px;}
   .controls{display:flex;align-items:center;gap:9px;flex-wrap:wrap;}
   .lang-toggle{display:flex;border:1px solid var(--indigo);border-radius:999px;overflow:hidden;}
   .lang-sel{border:1px solid var(--indigo);color:var(--indigo);background:#fff;border-radius:999px;
@@ -201,10 +207,10 @@
 
 <header class="app">
   <div class="brand">
-    <div class="seal">履</div>
+    <img class="brand-mascot" src="/rireko-wave.png" alt="rireko">
     <div>
-      <h1 data-ja="履歴書ビルダー" data-en="Rirekisho Builder">履歴書ビルダー</h1>
-      <p data-ja="日本で働く外国人のための履歴書作成ツール ＋ AI支援" data-en="Japanese resume maker for foreign residents + AI">日本で働く外国人のための履歴書作成ツール ＋ AI支援</p>
+      <h1><span class="wordmark">r<span class="ia">i<span class="st"></span><span class="bd"></span></span>reko</span></h1>
+      <p data-ja="日本で働く外国人のための履歴書づくり ＋ AI支援" data-en="Japanese résumé maker for foreign residents + AI">日本で働く外国人のための履歴書づくり ＋ AI支援</p>
     </div>
   </div>
   <div class="controls">
@@ -231,6 +237,7 @@
 <div class="modal-bg" id="loginModal">
   <div class="modal">
     <button class="x" onclick="closeLogin()">×</button>
+    <img class="modal-mascot" src="/rireko-resume.png" alt="rireko">
     <h3 data-ja="ログイン / 新規登録" data-en="Log in / Sign up">ログイン / 新規登録</h3>
     <p data-ja="メールアドレスを入れて送信すると、ログイン用のリンクが届きます。パスワードは不要です。AI機能の利用にはログインが必要です。" data-en="Enter your email and we'll send a login link. No password needed. Login is required to use the AI features.">メールアドレスを入れて送信すると、ログイン用のリンクが届きます。パスワードは不要です。AI機能の利用にはログインが必要です。</p>
     <input id="loginEmail" type="email" placeholder="you@example.com">

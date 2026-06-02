@@ -150,6 +150,14 @@
   .d1{animation-delay:.05s;}.d2{animation-delay:.18s;}.d3{animation-delay:.32s;}.d4{animation-delay:.46s;}.d5{animation-delay:.6s;}
   @keyframes fadeUp{to{opacity:1;transform:none;}}
 
+  /* ロゴ・ワードマーク（iの上にマスコットのアンテナ玉） */
+  .wordmark{font-family:var(--round);font-weight:700;color:var(--ink);font-size:25px;letter-spacing:.3px;line-height:1;display:inline-block;}
+  .wordmark .ia{position:relative;display:inline-block;}
+  .wordmark .ia .st{position:absolute;left:50%;top:-.34em;width:2px;height:.20em;background:var(--ink);transform:translateX(-50%);border-radius:1px;}
+  .wordmark .ia .bd{position:absolute;left:50%;top:-.56em;width:.24em;height:.24em;background:var(--accent);border-radius:50%;transform:translateX(-50%);}
+  /* ヒーローのマスコット */
+  .hero-mascot{width:100%;max-width:330px;height:auto;display:block;margin:0 auto;filter:drop-shadow(0 18px 30px rgba(39,49,79,.16));}
+
   @media(max-width:820px){
     .hero-grid{grid-template-columns:1fr;gap:40px;}
     .hero{padding:48px 0 64px;}
@@ -163,12 +171,8 @@
 <!-- ===== ヘッダー ===== -->
 <header>
   <div class="wrap nav">
-    <a class="brand" href="/">
-      <svg class="seal" viewBox="0 0 100 100" aria-hidden="true">
-        <circle cx="50" cy="50" r="46" fill="none" stroke="#d4533b" stroke-width="6"/>
-        <text x="50" y="68" text-anchor="middle" font-family="'Shippori Mincho',serif" font-size="52" font-weight="800" fill="#d4533b">り</text>
-      </svg>
-      rireko
+    <a class="brand" href="/" aria-label="rireko">
+      <span class="wordmark">r<span class="ia">i<span class="st"></span><span class="bd"></span></span>reko</span>
     </a>
     <nav class="nav-links">
       <a class="link" href="#how" data-ja="使い方" data-en="How it works">使い方</a>
@@ -205,22 +209,7 @@
       </div>
     </div>
     <div class="hero-visual">
-      <div class="paper-card float">
-        <div class="pc-row">
-          <div class="pc-lines">
-            <i class="s"></i><i class="l"></i><i class="m"></i>
-          </div>
-          <div class="pc-photo" data-ja="写真" data-en="Photo">写真</div>
-        </div>
-        <div class="pc-block">
-          <b data-ja="志望の動機" data-en="Motivation">志望の動機</b>
-          <div class="pc-lines"><i class="l"></i><i class="l"></i><i class="m"></i></div>
-        </div>
-        <svg class="pc-seal" viewBox="0 0 100 100" aria-hidden="true">
-          <circle cx="50" cy="50" r="45" fill="#d4533b"/>
-          <text x="50" y="66" text-anchor="middle" font-family="'Shippori Mincho',serif" font-size="44" font-weight="800" fill="#fff">履</text>
-        </svg>
-      </div>
+      <img class="hero-mascot float" src="/rireko-wave.png" alt="rireko mascot" width="680" height="680">
     </div>
   </div>
 </section>
@@ -365,7 +354,7 @@
   <div class="wrap">
     <div class="foot">
       <div>
-        <div class="brand">rireko</div>
+        <div class="brand"><span class="wordmark" style="color:#fff;font-size:22px">r<span class="ia">i<span class="st" style="background:#fff"></span><span class="bd"></span></span>reko</span></div>
         <p style="font-size:13.5px;margin-top:6px;max-width:320px;" data-ja="日本ではたらく外国人のための、やさしい履歴書づくり。" data-en="A kinder way to make a Japanese résumé, for foreigners working in Japan.">日本ではたらく外国人のための、やさしい履歴書づくり。</p>
       </div>
       <div class="foot-links">
