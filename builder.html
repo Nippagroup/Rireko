@@ -561,8 +561,9 @@ let cloudSynced=false;
 async function saveCloud(){
   if(!currentUser)return;
   try{
+    const d=collectState(); if(photoData)d.photo=photoData;
     await sb.from('resumes').upsert(
-      {user_id:currentUser.id, data:collectState(), updated_at:new Date().toISOString()},
+      {user_id:currentUser.id, data:d, updated_at:new Date().toISOString()},
       {onConflict:'user_id'}
     );
   }catch(e){}
@@ -573,6 +574,7 @@ async function loadCloud(){
     const {data,error}=await sb.from('resumes').select('data').eq('user_id',currentUser.id).maybeSingle();
     if(error||!data||!data.data||!Object.keys(data.data).length)return false;
     applyState(data.data);
+    if(data.data.photo){photoData=data.data.photo;const pp=document.getElementById('photoPrev');if(pp)pp.innerHTML='<img src="'+photoData+'">';}
     renderHistRows();renderLicRows();render();
     setSaved(lang==='ja'?'✓ アカウントから復元':'✓ Loaded from account');
     return true;

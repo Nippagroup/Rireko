@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>rireko 管理ビュー</title>
+<meta name="robots" content="noindex,nofollow">
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="icon" type="image/png" href="/favicon.png">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{--paper:#f6efe1;--ink:#27314f;--accent:#d4533b;--line:#d9d2c2;--muted:#7a7464;}
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--paper);color:#2c2c2c;font-family:"Zen Kaku Gothic New",sans-serif;line-height:1.6;}
+  header{background:var(--ink);color:#fff;padding:12px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+  header .t{font-family:"Shippori Mincho",serif;font-size:18px;}
+  header .who{font-size:12.5px;opacity:.85;}
+  button{font-family:inherit;cursor:pointer;border-radius:8px;border:none;padding:8px 14px;font-weight:700;font-size:13px;}
+  .btn{background:var(--accent);color:#fff;}
+  .btn-ghost{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.5);}
+  main{max-width:1100px;margin:0 auto;padding:22px 18px 70px;}
+  .login{max-width:420px;margin:60px auto;background:#fff;border:1px solid var(--line);border-radius:14px;padding:26px;text-align:center;}
+  .login h1{font-family:"Shippori Mincho",serif;color:var(--ink);font-size:22px;margin:0 0 6px;}
+  .login p{font-size:13.5px;color:var(--muted);margin:0 0 16px;}
+  .login input{width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:9px;font-size:15px;font-family:inherit;margin-bottom:12px;}
+  .login .btn{width:100%;padding:12px;}
+  .msg{font-size:13px;margin-top:12px;min-height:18px;}
+  .count{font-size:13px;color:var(--muted);margin:4px 0 16px;}
+  .grid{display:grid;grid-template-columns:1fr;gap:14px;}
+  @media(min-width:720px){.grid{grid-template-columns:1fr 1fr;}}
+  .card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px;display:flex;gap:14px;}
+  .card .photo{width:92px;height:120px;flex:none;border:1px solid var(--line);border-radius:6px;background:#f2efe6;display:grid;place-items:center;overflow:hidden;color:#b3ab97;font-size:11px;}
+  .card .photo img{width:100%;height:100%;object-fit:cover;}
+  .card .body{flex:1;min-width:0;}
+  .card .meta{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:8px;}
+  .card .em{font-weight:700;color:var(--ink);font-size:13.5px;word-break:break-all;}
+  .card .dt{font-size:12px;color:var(--muted);}
+  table.kv{width:100%;border-collapse:collapse;font-size:12.5px;}
+  table.kv td{padding:2px 6px;vertical-align:top;border-bottom:1px solid #f0ece1;}
+  table.kv td.k{color:var(--muted);white-space:nowrap;width:38%;}
+  details{margin-top:8px;font-size:12px;}
+  details pre{background:#f7f5ee;border:1px solid var(--line);border-radius:8px;padding:10px;overflow:auto;max-height:220px;font-size:11px;white-space:pre-wrap;word-break:break-all;}
+  .empty{background:#fff;border:1px dashed var(--line);border-radius:14px;padding:30px;text-align:center;color:var(--muted);font-size:14px;}
+</style>
+</head>
+<body>
+
+<div id="loginView" class="login" style="display:none">
+  <h1>rireko 管理ビュー</h1>
+  <p>管理者のメールアドレスでログインしてください。ログイン用のリンクをメールでお送りします。</p>
+  <input id="email" type="email" placeholder="you@example.com" autocomplete="email">
+  <button class="btn" onclick="sendLink()">ログインリンクを送る</button>
+  <div class="msg" id="loginMsg"></div>
+</div>
+
+<div id="adminView" style="display:none">
+  <header>
+    <span class="t">rireko 管理ビュー</span>
+    <span style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <span class="who" id="who"></span>
+      <button class="btn-ghost" onclick="load()">再読み込み</button>
+      <button class="btn-ghost" onclick="logout()">ログアウト</button>
+    </span>
+  </header>
+  <main>
+    <div class="count" id="count"></div>
+    <div class="grid" id="grid"></div>
+  </main>
+</div>
+
+<script>
+const SUPABASE_URL='https://nxjoivdvanxxecphukew.supabase.co';
+const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im54am9pdmR2YW54eGVjcGh1a2V3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAyMjU1MDIsImV4cCI6MjA5NTgwMTUwMn0.Q6yXAg204rRr4mdxIo7Ux_sv_4vf2L2L9uMDVDn6xVA';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+function show(view){
+  document.getElementById('loginView').style.display = view==='login'?'block':'none';
+  document.getElementById('adminView').style.display = view==='admin'?'block':'none';
+}
+async function sendLink(){
+  const email=document.getElementById('email').value.trim();
+  const msg=document.getElementById('loginMsg');
+  if(!email){msg.textContent='メールアドレスを入力してください。';return;}
+  msg.textContent='送信中…';
+  try{
+    const {error}=await sb.auth.signInWithOtp({email,options:{emailRedirectTo:location.origin+'/admin.html'}});
+    msg.textContent = error ? ('エラー：'+error.message) : 'メールを送りました。届いたリンクを開いてください。';
+  }catch(e){msg.textContent='エラーが発生しました。';}
+}
+async function logout(){ await sb.auth.signOut(); show('login'); }
+
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+
+function card(item){
+  const d=item.data||{};
+  const photo = d.photo ? '<img src="'+d.photo+'">' : '写真なし';
+  let rows='';
+  Object.keys(d).forEach(k=>{
+    if(k==='photo') return;
+    const v=d[k];
+    let disp;
+    if(Array.isArray(v)){ if(!v.length) return; disp=v.length+'件'; }
+    else if(v && typeof v==='object'){ return; }
+    else { if(v===''||v==null) return; disp=esc(v); }
+    rows += '<tr><td class="k">'+esc(k)+'</td><td>'+disp+'</td></tr>';
+  });
+  if(!rows) rows='<tr><td colspan="2" style="color:#b3ab97">（入力データなし）</td></tr>';
+  const dt = item.updated_at ? new Date(item.updated_at).toLocaleString('ja-JP') : '';
+  return '<div class="card">'+
+    '<div class="photo">'+photo+'</div>'+
+    '<div class="body">'+
+      '<div class="meta"><span class="em">'+esc(item.email)+'</span><span class="dt">'+esc(dt)+'</span></div>'+
+      '<table class="kv">'+rows+'</table>'+
+      '<details><summary>詳細（JSON）</summary><pre>'+esc(JSON.stringify(redact(d),null,2))+'</pre></details>'+
+    '</div></div>';
+}
+function redact(d){ const o=Object.assign({},d); if(o.photo)o.photo='[写真データ省略]'; return o; }
+
+async function load(){
+  const grid=document.getElementById('grid');
+  const count=document.getElementById('count');
+  grid.innerHTML=''; count.textContent='読み込み中…';
+  const {data}=await sb.auth.getSession();
+  const token=data.session?data.session.access_token:null;
+  if(!token){show('login');return;}
+  try{
+    const r=await fetch('/api/resumes',{headers:{Authorization:'Bearer '+token}});
+    if(r.status===403){count.textContent=''; grid.innerHTML='<div class="empty">このアカウントは管理者として登録されていません。Vercel の ADMIN_EMAILS にこのメールを追加してください。</div>';return;}
+    if(r.status===401){show('login');return;}
+    if(!r.ok){grid.innerHTML='<div class="empty">読み込みに失敗しました。</div>';count.textContent='';return;}
+    const j=await r.json();
+    count.textContent='保存済みの履歴書：'+j.count+'件';
+    if(!j.resumes||!j.resumes.length){grid.innerHTML='<div class="empty">まだクラウドに保存された履歴書はありません。<br>※ クラウド保存は「ログインした人が保存」したときに作られます。まずご自身でログインして、ビルダーで保存してみてください。</div>';return;}
+    grid.innerHTML=j.resumes.map(card).join('');
+  }catch(e){grid.innerHTML='<div class="empty">通信エラーが発生しました。</div>';count.textContent='';}
+}
+
+async function init(){
+  const {data}=await sb.auth.getSession();
+  if(data.session){
+    document.getElementById('who').textContent=data.session.user.email||'';
+    show('admin'); load();
+  }else{ show('login'); }
+  sb.auth.onAuthStateChange((_e,session)=>{
+    if(session){ document.getElementById('who').textContent=session.user.email||''; show('admin'); load(); }
+    else show('login');
+  });
+}
+init();
+</script>
+</body>
+</html>
