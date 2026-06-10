@@ -10,6 +10,25 @@
 <link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@600;700;800&family=Zen+Maru+Gothic:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="icon" type="image/png" href="/favicon.png">
 <link rel="apple-touch-icon" href="/favicon.png">
+<script>
+(function(){
+  try{
+    if(location.hash && location.hash.indexOf('access_token')!==-1){
+      var s=document.createElement('script');
+      s.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+      s.onload=async function(){
+        try{
+          var sb=window.supabase.createClient('https://nxjoivdvanxxecphukew.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im54am9pdmR2YW54eGVjcGh1a2V3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAyMjU1MDIsImV4cCI6MjA5NTgwMTUwMn0.Q6yXAg204rRr4mdxIo7Ux_sv_4vf2L2L9uMDVDn6xVA');
+          await sb.auth.getSession();
+        }catch(e){}
+        location.replace('/builder.html');
+      };
+      s.onerror=function(){ location.replace('/builder.html'); };
+      document.head.appendChild(s);
+    }
+  }catch(e){}
+})();
+</script>
 <style>
   :root{
     --paper:#f6efe1; --paper2:#fffdf8; --ink:#27314f; --ink-soft:#5c5746;
