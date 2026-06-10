@@ -7,26 +7,30 @@ const ADMIN_KEY = process.env.ADMIN_KEY;
 
 export default async function handler(req, res) {
   if (req.method !== "GET")
-    return res.status(405).json({ error: "Method not allowed" });
+    return res.status(405).json({ error: "method_not_allowed" });
   if (!SUPABASE_URL || !SERVICE_KEY)
-    return res.status(500).json({ error: "Server not fully configured." });
+    return res.status(500).json({ error: "server_not_configured" });
   if (!ADMIN_KEY)
-    return res.status(500).json({ error: "ADMIN_KEY not set." });
+    return res.status(500).json({ error: "admin_key_not_set" });
 
-  // 管理キーの確認（ヘッダー x-admin-key）
   const key = req.headers["x-admin-key"] || "";
   if (key !== ADMIN_KEY) return res.status(401).json({ error: "unauthorized" });
 
   try {
-    // 全履歴書を取得（SERVICE キーで RLS を越える）
     const rr = await fetch(
       `${SUPABASE_URL}/rest/v1/resumes?select=user_id,data,updated_at&order=updated_at.desc`,
       { headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}` } }
     );
-    if (!rr.ok) return res.status(502).json({ error: "fetch_failed" });
+    if (!rr.ok) {
+      const detail = await rr.text().catch(() => "");
+      return res.status(502).json({
+        error: "resumes_fetch_failed",
+        upstream_status: rr.status,
+        detail: String(detail).slice(0, 300),
+      });
+    }
     const rows = await rr.json();
 
-    // user_id -> メール の対応表
     const map = {};
     try {
       const ur = await fetch(`${SUPABASE_URL}/auth/v1/admin/users?per_page=200`, {
@@ -48,6 +52,8 @@ export default async function handler(req, res) {
     return res.status(200).json({ count: resumes.length, resumes });
   } catch (e) {
     console.error("resumes error:", e);
-    return res.status(500).json({ error: "server_error" });
+    return res
+      .status(500)
+      .json({ error: "server_error", detail: String((e && e.message) || e).slice(0, 300) });
   }
 }

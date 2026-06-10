@@ -114,9 +114,16 @@ async function load(){
   try{
     const r=await fetch('/api/resumes',{headers:{'x-admin-key':key}});
     if(r.status===401){ show('login'); document.getElementById('loginMsg').textContent='キーが違うようです。もう一度入力してください。'; return; }
-    if(r.status===500){ grid.innerHTML='<div class="empty">サーバー側の設定が未完了です（ADMIN_KEY 等）。Vercel の環境変数と再デプロイをご確認ください。</div>'; count.textContent=''; return; }
-    if(!r.ok){ grid.innerHTML='<div class="empty">読み込みに失敗しました。</div>'; count.textContent=''; return; }
-    const j=await r.json();
+    let body=null; try{ body=await r.json(); }catch(e){}
+    if(!r.ok){
+      const parts=['読み込みに失敗しました。','状態コード: '+r.status];
+      if(body&&body.error) parts.push('種類: '+body.error);
+      if(body&&body.upstream_status!=null) parts.push('上流コード: '+body.upstream_status);
+      if(body&&body.detail) parts.push('詳細: '+body.detail);
+      grid.innerHTML='<div class="empty">'+parts.map(esc).join('<br>')+'</div>';
+      count.textContent=''; return;
+    }
+    const j=body||{};
     count.textContent='保存済みの履歴書：'+j.count+'件';
     if(!j.resumes||!j.resumes.length){ grid.innerHTML='<div class="empty">まだクラウドに保存された履歴書はありません。<br>※ クラウド保存は「ログインした人がビルダーで保存」したときに作られます。</div>'; return; }
     grid.innerHTML=j.resumes.map(card).join('');
